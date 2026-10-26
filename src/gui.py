@@ -1,167 +1,241 @@
 #!/usr/bin/env python3
-"""Tkinter UI: live buffer animation for the Producer-Consumer simulation."""
-import tkinter as tk
-from tkinter import ttk, messagebox
+"""Web UI for the Producer-Consumer (bounded buffer) simulation.
 
-from bounded_buffer import Simulation
+Only the Python standard library is used: a small local HTTP server drives the
+real threads in bounded_buffer.py, and the browser page (ui/index.html) draws
+them as a mailbox: senders (producers) put letters into the mailbox (buffer),
+receivers (consumers) take them out.
 
-COLORS = {"idle": "#d0d0d0", "sleeping": "#bdbdbd", "producing": "#4caf50",
-          "waiting": "#ffc107", "consuming": "#2196f3", "paused": "#ab47bc",
-          "stopped": "#757575"}
-DEFAULTS = dict(size="5", prod="2", cons="2", psleep="1.0", csleep="1.0")
+    python3 src/gui.py                 # opens http://127.0.0.1:8765
+    python3 src/gui.py --port 9000 --no-browser
+"""
+import argparse
+import json
+import os
+import re
+import sys
+import threading
+import time
+import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from bounded_buffer import Simulation  # noqa: E402
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+INDEX = os.path.join(HERE, "ui", "index.html")
+MAX_EVENTS = 5000
+
+# validate_params() speaks English; the UI speaks Mongolian.
+FIELD_MN = {
+    "Buffer size": "Хайрцгийн нүдний тоо (buffer size)",
+    "Producers": "Илгээгчийн тоо (producers)",
+    "Consumers": "Хүлээн авагчийн тоо (consumers)",
+    "Producer max sleep": "Илгээгчийн амралт (producer sleep)",
+    "Consumer max sleep": "Хүлээн авагчийн амралт (consumer sleep)",
+}
 
 
-class App(tk.Tk):
+def to_mongolian(msg):
+    m = re.match(r"(.+?) must be (an integer|a number) \(got (.*)\)\.?$", msg)
+    if m:
+        name = FIELD_MN.get(m.group(1), m.group(1))
+        kind = "бүхэл тоо" if m.group(2) == "an integer" else "тоо"
+        return f"{name} {kind} байх ёстой. Оруулсан утга: {m.group(3)}"
+    m = re.match(r"(.+?) must be between (\S+) and (\S+?)(?: seconds)? \(got (.*)\)\.?$", msg)
+    if m:
+        name = FIELD_MN.get(m.group(1), m.group(1))
+        return f"{name} {m.group(2)}-{m.group(3)} хооронд байх ёстой. Оруулсан утга: {m.group(4)}"
+    return msg
+
+
+class Controller:
+    """Owns the current Simulation and the list of buffer events for the page."""
+
     def __init__(self):
-        super().__init__()
-        self.title("Producer-Consumer: bounded buffer")
+        self.lock = threading.Lock()     # guards sim / run bookkeeping
+        self.ev_lock = threading.Lock()  # guards events (taken from worker threads)
         self.sim = None
-        self.seen = 0
-        self.vars = {k: tk.StringVar(value=v) for k, v in DEFAULTS.items()}
-        self.start_paused = tk.BooleanVar(value=False)
-        self._controls()
-        self.canvas = tk.Canvas(self, width=980, height=450, bg="white")
-        self.canvas.grid(row=1, column=0, sticky="nsew")
-        self.logbox = tk.Text(self, height=9, state="disabled")
-        self.logbox.grid(row=2, column=0, sticky="ew")
-        self.columnconfigure(0, weight=1)
-        self._tick()
+        self.config = None
+        self.events = []
+        self.seq = 0
+        self.run_id = 0
+        self.stopped_at = None
 
-    def _controls(self):
-        f = ttk.Frame(self, padding=6)
-        f.grid(row=0, column=0, sticky="ew")
-        fields = [("Buffer size (1-20)", "size"), ("Producers (1-10)", "prod"),
-                  ("Consumers (1-10)", "cons"), ("Prod. max sleep s", "psleep"),
-                  ("Cons. max sleep s", "csleep")]
-        for i, (label, key) in enumerate(fields):
-            ttk.Label(f, text=label).grid(row=0, column=i, padx=4)
-            ttk.Entry(f, textvariable=self.vars[key], width=10).grid(row=1, column=i, padx=4)
-        ttk.Checkbutton(f, text="Start paused (step mode)",
-                        variable=self.start_paused).grid(row=1, column=5, padx=8)
-        b = ttk.Frame(f)
-        b.grid(row=2, column=0, columnspan=6, pady=6, sticky="w")
-        self.btn_pause = ttk.Button(b, text="Pause", command=self.on_pause)
-        for text, cmd in [("Start", self.on_start), (None, None), ("Step", self.on_step),
-                          ("Stop", self.on_stop), ("Reset", self.on_reset)]:
-            w = self.btn_pause if text is None else ttk.Button(b, text=text, command=cmd)
-            w.pack(side="left", padx=3)
+    # called by worker threads (inside the buffer mutex) for every insert/remove
+    def _push(self, sim, kind, who, slot, item):
+        with self.ev_lock:
+            if sim is not self.sim:
+                return
+            self.seq += 1
+            t = time.monotonic() - (sim.t0 or time.monotonic())
+            self.events.append(dict(seq=self.seq, kind=kind, who=who, slot=slot,
+                                    item=item, t=round(t, 3)))
+            if len(self.events) > MAX_EVENTS:
+                del self.events[:-MAX_EVENTS]
 
-    # ---- actions
-    def on_start(self):
-        if self.sim and not self.sim.snapshot()["stopped"]:
-            return
-        try:
-            v = self.vars
-            sim = Simulation(v["size"].get(), v["prod"].get(), v["cons"].get(),
-                             v["psleep"].get(), v["csleep"].get())
-        except ValueError as e:
-            messagebox.showerror("Invalid input", str(e))
-            return
-        self._clear_log()
-        self.sim = sim
-        if self.start_paused.get():
+    def start(self, cfg):
+        with self.lock:
+            if self.sim and not self.sim.stop.is_set():
+                raise ValueError("Симуляци ажиллаж байна. Эхлээд «Зогсоох» дарна уу.")
+            try:
+                sim = Simulation(cfg.get("size"), cfg.get("prod"), cfg.get("cons"),
+                                 cfg.get("psleep"), cfg.get("csleep"))
+            except ValueError as e:
+                raise ValueError(to_mongolian(str(e)))
+            orig = sim.buf.listener
+
+            def listener(kind, slot, item, _orig=orig, _sim=sim):
+                _orig(kind, slot, item)
+                self._push(_sim, kind, threading.current_thread().name, slot, item)
+
+            sim.buf.listener = listener
+            with self.ev_lock:
+                self.events = []
+                self.sim = sim
+            self.run_id += 1
+            self.stopped_at = None
+            self.config = dict(size=sim.buffer_size, prod=sim.n_prod, cons=sim.n_cons,
+                               psleep=sim.prod_sleep, csleep=sim.cons_sleep)
+            if cfg.get("paused"):
+                sim.pause()
+            sim.start()
+
+    def _current(self):
+        with self.lock:
+            return self.sim
+
+    def pause(self):
+        sim = self._current()
+        if sim and not sim.stop.is_set():
             sim.pause()
-        sim.start()
 
-    def on_pause(self):
-        if self.sim:
-            self.sim.resume() if self.sim.paused.is_set() else self.sim.pause()
+    def resume(self):
+        sim = self._current()
+        if sim and not sim.stop.is_set():
+            sim.resume()
 
-    def on_step(self):
-        if self.sim:
-            self.sim.step()
+    def step(self):
+        sim = self._current()
+        if sim and not sim.stop.is_set():
+            sim.step()
 
-    def on_stop(self):
-        if self.sim:
-            self.sim.stop_all()
+    def stop(self):
+        sim = self._current()
+        if sim and not sim.stop.is_set():
+            self.stopped_at = time.monotonic()
+            sim.stop_all()          # joins threads; done outside self.lock on purpose
 
-    def on_reset(self):
-        if self.sim:
-            self.sim.stop_all()
-        self.sim = None
-        for k, v in DEFAULTS.items():
-            self.vars[k].set(v)
-        self._clear_log()
+    def reset(self):
+        self.stop()
+        with self.lock:
+            with self.ev_lock:
+                self.sim = None
+                self.events = []
+            self.config = None
+            self.run_id += 1
 
-    def _clear_log(self):
-        self.seen = 0
-        self.logbox.config(state="normal")
-        self.logbox.delete("1.0", "end")
-        self.logbox.config(state="disabled")
+    def state(self, since=0):
+        with self.lock:
+            sim, run, cfg = self.sim, self.run_id, self.config
+        if sim is None:
+            return dict(run=run, seq=self.seq, sim=None, events=[], config=None)
+        snap = sim.snapshot()
+        snap.pop("log", None)
+        end = self.stopped_at if snap["stopped"] and self.stopped_at else time.monotonic()
+        snap["elapsed"] = round(end - sim.t0, 2) if sim.t0 else 0.0
+        with self.ev_lock:
+            events = [e for e in self.events if e["seq"] > since]
+            seq = self.seq
+        return dict(run=run, seq=seq, sim=snap, events=events, config=cfg)
 
-    # ---- drawing
-    def _tick(self):
-        self._draw()
-        self.after(100, self._tick)
 
-    def _draw(self):
-        c = self.canvas
-        c.delete("all")
-        if not self.sim:
-            c.create_text(490, 200, text="Set parameters and press Start",
-                          font=("Arial", 16), fill="#888")
-            self._legend(c)
-            return
-        s = self.sim.snapshot()
-        self.btn_pause.config(text="Resume" if s["paused"] else "Pause")
-        n = len(s["slots"])
-        w = min(60, 920 // n)
-        x0 = 30
-        c.create_text(x0, 20, anchor="w", font=("Arial", 12, "bold"),
-                      text="Circular buffer")
-        for i, val in enumerate(s["slots"]):
-            x = x0 + i * w
-            c.create_rectangle(x, 50, x + w, 100, fill="#ff9800" if val is not None else "#eeeeee",
-                               outline="#d32f2f" if i == s["last"] else "#555",
-                               width=3 if i == s["last"] else 1)
-            c.create_text(x + w / 2, 75, text="" if val is None else str(val),
-                          font=("Arial", 13, "bold"))
-            c.create_text(x + w / 2, 112, text=str(i), fill="#888")
-        ox = x0 + s["out_idx"] * w + w / 2
-        ix = x0 + s["in_idx"] * w + w / 2
-        c.create_text(ox, 38, text="out v", fill="#1565c0", font=("Arial", 10, "bold"))
-        c.create_text(ix, 128, text="^ in", fill="#2e7d32", font=("Arial", 10, "bold"))
-        # workers
-        prods = [k for k in s["states"] if k.startswith("P")]
-        cons = [k for k in s["states"] if k.startswith("C")]
-        for names, title, x in ((prods, "Producers", 30), (cons, "Consumers", 270)):
-            c.create_text(x, 160, anchor="w", text=title, font=("Arial", 12, "bold"))
-            for j, name in enumerate(names):
-                st = s["states"][name]
-                y = 180 + j * 26
-                c.create_rectangle(x, y, x + 200, y + 22, fill=COLORS.get(st, "#fff"), outline="#555")
-                c.create_text(x + 8, y + 11, anchor="w", text=f"{name}: {st}")
-        # semaphores + counters
-        c.create_text(540, 160, anchor="w", text="Synchronization", font=("Arial", 12, "bold"))
-        lines = [f"empty = {s['empty']}", f"full  = {s['full']}",
-                 f"mutex = {'LOCKED' if s['mutex_locked'] else 'free'}",
-                 f"produced = {s['produced']}", f"consumed = {s['consumed']}",
-                 f"in buffer = {s['produced'] - s['consumed']}"]
-        for j, t in enumerate(lines):
-            c.create_text(540, 185 + j * 22, anchor="w", text=t, font=("Courier", 12))
-        self._legend(c)
-        new = s["log"][self.seen:]
-        if new:
-            self.logbox.config(state="normal")
-            self.logbox.insert("end", "\n".join(new) + "\n")
-            self.logbox.see("end")
-            self.logbox.config(state="disabled")
-            self.seen = len(s["log"])
+def make_handler(ctl):
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):  # keep the terminal quiet
+            pass
 
-    def _legend(self, c):
-        c.create_text(760, 160, anchor="w", text="Legend", font=("Arial", 12, "bold"))
-        items = [("sleeping", "sleeping"), ("producing", "producing (item generated)"),
-                 ("waiting", "waiting on semaphore/mutex"), ("consuming", "consuming"),
-                 ("paused", "paused (waiting for Step)")]
-        for j, (k, label) in enumerate(items):
-            y = 182 + j * 24
-            c.create_rectangle(760, y, 780, y + 16, fill=COLORS[k], outline="#555")
-            c.create_text(788, y + 8, anchor="w", text=label)
-        c.create_rectangle(760, 304, 780, 320, fill="#ff9800", outline="#555")
-        c.create_text(788, 312, anchor="w", text="slot full (value)")
-        c.create_rectangle(760, 328, 780, 344, fill="#eee", outline="#d32f2f", width=2)
-        c.create_text(788, 336, anchor="w", text="last changed slot")
+        def _send(self, code, body, ctype):
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _json(self, code, obj):
+            self._send(code, json.dumps(obj, ensure_ascii=False).encode("utf-8"),
+                       "application/json; charset=utf-8")
+
+        def do_GET(self):
+            path, _, query = self.path.partition("?")
+            if path in ("/", "/index.html"):
+                with open(INDEX, "rb") as f:
+                    self._send(200, f.read(), "text/html; charset=utf-8")
+            elif path == "/api/state":
+                try:
+                    since = int(parse_qs(query).get("since", ["0"])[0])
+                except ValueError:
+                    since = 0
+                self._json(200, ctl.state(since))
+            else:
+                self._json(404, {"error": "not found"})
+
+        def do_POST(self):
+            actions = {"/api/pause": ctl.pause, "/api/resume": ctl.resume,
+                       "/api/step": ctl.step, "/api/stop": ctl.stop, "/api/reset": ctl.reset}
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                data = json.loads(self.rfile.read(n) or b"{}") if n else {}
+                if self.path == "/api/start":
+                    ctl.start(data if isinstance(data, dict) else {})
+                elif self.path in actions:
+                    actions[self.path]()
+                else:
+                    return self._json(404, {"error": "not found"})
+                self._json(200, {"ok": True})
+            except ValueError as e:      # includes bad JSON
+                self._json(400, {"error": str(e)})
+
+    return Handler
+
+
+def serve(host="127.0.0.1", port=8765, ctl=None):
+    """Create the server; if the port is busy, try the next ones (port=0 → any free port)."""
+    ctl = ctl or Controller()
+    last = None
+    for p in (range(port, port + 20) if port else [0]):
+        try:
+            srv = ThreadingHTTPServer((host, p), make_handler(ctl))
+            srv.daemon_threads = True
+            return srv, ctl
+        except OSError as e:
+            last = e
+    raise last
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Producer-Consumer web UI (шуудангийн хайрцаг)")
+    ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--no-browser", action="store_true", help="браузер автоматаар нээхгүй")
+    args = ap.parse_args(argv)
+
+    srv, ctl = serve(args.host, args.port)
+    url = f"http://{args.host}:{srv.server_address[1]}/"
+    print(f"Шуудангийн хайрцаг ажиллаж байна: {url}")
+    print("Браузер нээгдэхгүй бол дээрх хаягийг өөрөө нээнэ үү. Зогсоох: Ctrl+C")
+    if not args.no_browser:
+        threading.Timer(0.6, webbrowser.open, args=(url,)).start()
+    try:
+        srv.serve_forever(poll_interval=0.2)
+    except KeyboardInterrupt:
+        print("\nХаалаа.")
+    finally:
+        ctl.stop()
+        srv.server_close()
 
 
 if __name__ == "__main__":
-    App().mainloop()
+    main()

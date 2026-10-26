@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Шуудангийн хайрцаг · Producer–Consumer</title>
+<style>
+:root{
+  --bg:#f3f4f9; --card:#ffffff; --ink:#18202f; --muted:#6a7287; --line:#e4e7ef;
+  --accent:#4f46e5; --accent-ink:#ffffff; --accent-soft:#eceefe;
+  --green:#15803d; --green-soft:#e6f6eb; --blue:#0369a1; --blue-soft:#e2f2fb;
+  --amber:#b45309; --amber-soft:#fff3d6; --red:#dc2626; --red-soft:#fde8e8;
+  --violet:#7e22ce; --violet-soft:#f3e8ff; --gray-soft:#eff1f5;
+  --box:#3347b0; --box-dark:#22307c; --slot:#dfe6fb; --slot-line:#b9c6f0;
+  --paper:#fffdf6; --paper-edge:#c7a462; --stamp:#e4572e; --skin:#ffd9b8;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 6px 20px rgba(16,24,40,.06);
+  --radius:16px;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#0f1320; --card:#171c2c; --ink:#e8ebf4; --muted:#9aa2b8; --line:#283049;
+  --accent:#8b8cff; --accent-ink:#0f1320; --accent-soft:#23264a;
+  --green:#4ade80; --green-soft:#16301f; --blue:#5cc3ff; --blue-soft:#13283a;
+  --amber:#fbbf24; --amber-soft:#3a2d10; --red:#f87171; --red-soft:#3b1a1d;
+  --violet:#d8a7ff; --violet-soft:#2e1f44; --gray-soft:#1f2538;
+  --box:#3f55c8; --box-dark:#2a3a92; --slot:#1c2547; --slot-line:#33417a;
+  --paper:#fff8e7; --paper-edge:#c7a462;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","DejaVu Sans",sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+code{font:12px/1 ui-monospace,"DejaVu Sans Mono",monospace;background:var(--gray-soft);color:var(--muted);padding:3px 6px;border-radius:6px}
+small{color:var(--muted);font-weight:500}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{width:40px;height:40px;flex:none}
+.brand h1{font-size:19px;margin:0;letter-spacing:-.01em}
+.brand p{margin:0;font-size:12.5px;color:var(--muted)}
+.top-right{display:flex;align-items:center;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;background:var(--gray-soft);color:var(--muted)}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.chip.run{background:var(--green-soft);color:var(--green)}
+.chip.run::before{animation:pulse 1.2s infinite}
+.chip.pause{background:var(--violet-soft);color:var(--violet)}
+.chip.stop{background:var(--red-soft);color:var(--red)}
+@keyframes pulse{50%{opacity:.25}}
+.clock{font:600 14px ui-monospace,"DejaVu Sans Mono",monospace;color:var(--muted);min-width:64px;text-align:right}
+
+/* ---------- buttons ---------- */
+.btn{border:1px solid var(--line);background:var(--card);border-radius:11px;padding:9px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .08s,background .15s,border-color .15s}
+.btn:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08);background:var(--accent)}
+.btn.danger:hover:not(:disabled){border-color:var(--red);background:var(--red-soft)}
+.btn svg{width:16px;height:16px}
+.btn.ghost{background:transparent}
+.icon-btn{width:38px;height:38px;padding:0}
+kbd{font:11px ui-monospace,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:var(--muted)}
+
+/* ---------- layout ---------- */
+.layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:20px;padding:20px 24px 28px;max-width:1560px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.panel{display:flex;flex-direction:column;gap:16px}
+.panel .card{padding:16px}
+h2{font-size:14px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+h3{font-size:15px;margin:0;display:flex;align-items:center;gap:8px}
+
+/* settings */
+.field{margin-bottom:14px}
+.field-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.field-top label{font-weight:600;font-size:14px}
+.field-top label small{display:block;font-size:11.5px;font-weight:500}
+.num{width:66px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);text-align:center;font-weight:700}
+.num.bad{border-color:var(--red);background:var(--red-soft)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.preset{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:5px 10px;font-size:12.5px;cursor:pointer}
+.preset:hover{border-color:var(--accent);color:var(--accent)}
+.preset.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:14px;font-weight:600}
+.switch small{display:block;font-weight:500;font-size:12px}
+.toggle{position:relative;width:42px;height:24px;flex:none}
+.toggle input{opacity:0;width:0;height:0}
+.toggle span{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:.2s;cursor:pointer}
+.toggle span::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.toggle input:checked+span{background:var(--accent)}
+.toggle input:checked+span::after{transform:translateX(18px)}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.controls .wide{grid-column:1/-1;padding:12px}
+.controls .btn{white-space:nowrap;padding:9px 10px;font-size:14px}
+.shortcuts{margin-top:10px;font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+.legend{display:grid;gap:7px;font-size:13px}
+.legend div{display:flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:4px;flex:none;border:1px solid rgba(0,0,0,.08)}
+
+/* ---------- stage ---------- */
+.stage{display:flex;flex-direction:column;gap:16px;min-width:0}
+.narr{display:flex;align-items:center;gap:14px;padding:14px 18px;border-left:5px solid var(--accent)}
+.narr-ic{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;flex:none}
+.narr-ic svg{width:22px;height:22px;color:var(--accent)}
+.narr-main{font-size:17px;font-weight:600;min-height:25px}
+.narr-main b{color:var(--accent)}
+.narr-hint{font-size:13.5px;color:var(--muted);margin-top:2px;min-height:19px}
+.narr-hint.warn{color:var(--amber);font-weight:600}
+
+.scene{position:relative;display:grid;grid-template-columns:minmax(200px,1fr) minmax(360px,1.7fr) minmax(200px,1fr);gap:18px;padding:18px}
+.col h3{margin-bottom:10px}
+.col h3 .dot{width:10px;height:10px;border-radius:50%}
+.col.cons h3{justify-content:flex-end}
+.people{display:flex;flex-direction:column;gap:7px}
+.person{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px;border-radius:12px;background:var(--gray-soft);border:1px solid transparent;transition:background .25s,border-color .25s}
+.cons .person{flex-direction:row-reverse;padding:6px 6px 6px 10px;text-align:right}
+.avatar{width:38px;height:38px;flex:none;border-radius:11px;background:var(--card);display:grid;place-items:center}
+.avatar svg{width:34px;height:34px}
+.pinfo{flex:1;min-width:0}
+.pname{font-weight:700;font-size:13px}
+.pstate{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hold{width:26px;height:19px;flex:none;opacity:0;transition:opacity .2s}
+.hold svg{width:26px;height:19px}
+.person[data-st=producing],.person[data-st=consuming]{border-color:transparent}
+.prod .person[data-st=producing]{background:var(--green-soft)}
+.prod .person[data-st=producing] .pstate{color:var(--green);font-weight:600}
+.cons .person[data-st=consuming]{background:var(--blue-soft)}
+.cons .person[data-st=consuming] .pstate{color:var(--blue);font-weight:600}
+.person[data-st=waiting]{background:var(--amber-soft);border-color:color-mix(in srgb,var(--amber) 35%,transparent)}
+.person[data-st=waiting] .pstate{color:var(--amber);font-weight:700}
+.person[data-st=paused]{background:var(--violet-soft)}
+.person[data-st=paused] .pstate{color:var(--violet);font-weight:600}
+.person[data-st=stopped]{opacity:.55}
+.prod .person[data-st=producing] .hold,.prod .person[data-st=waiting] .hold,.cons .person[data-st=consuming] .hold{opacity:1}
+.eyes-c{display:none}
+.person[data-st=sleeping] .eyes-o{display:none}
+.person[data-st=sleeping] .eyes-c{display:inline}
+
+/* mailbox */
+.boxwrap{display:flex;flex-direction:column;align-items:stretch;min-width:0}
+.boxwrap h3{justify-content:center;margin-bottom:6px}
+.ptrs{display:grid;gap:6px;padding:0 18px;min-height:30px}
+.ptr{display:flex;justify-content:center;align-items:flex-end}
+.ptrs.in .ptr{align-items:flex-start}
+.ptr span{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap;visibility:hidden}
+.ptrs.out .ptr span{background:var(--blue-soft);color:var(--blue)}
+.ptrs.in .ptr span{background:var(--green-soft);color:var(--green)}
+.ptr.on span{visibility:visible}
+.mailbox{background:var(--box);border-radius:30px 30px 14px 14px;padding:30px 18px 12px;position:relative;box-shadow:inset 0 -6px 0 var(--box-dark)}
+.mailbox::before{content:"ШУУДАН";position:absolute;top:8px;left:0;right:0;text-align:center;color:#fff;font-size:11px;font-weight:800;letter-spacing:.3em;opacity:.9}
+.slots{display:grid;gap:6px}
+.slot{height:68px;border-radius:9px;background:var(--slot);border:1px solid var(--slot-line);display:grid;place-items:center;position:relative;transition:box-shadow .2s}
+.slot.last{box-shadow:0 0 0 3px #ffb020}
+.slot .env{width:86%;max-width:56px;height:auto;animation:pop .25s ease-out}
+.idx{display:grid;gap:6px;margin-top:6px}
+.idx div{text-align:center;color:#c8d1f5;font:600 11px ui-monospace,monospace}
+@keyframes pop{from{transform:scale(.6);opacity:.2}to{transform:none;opacity:1}}
+.post{width:22px;height:18px;background:var(--box-dark);margin:0 auto;border-radius:0 0 4px 4px}
+.wrapnote{text-align:center;font-size:12.5px;color:var(--muted);margin-top:6px}
+.idle{position:absolute;inset:0;border-radius:var(--radius);background:color-mix(in srgb,var(--card) 88%,transparent);display:grid;place-items:center;text-align:center;z-index:2;backdrop-filter:blur(2px)}
+.idle h4{margin:10px 0 4px;font-size:20px}
+.idle p{margin:0;color:var(--muted)}
+.idle svg{width:72px;height:72px}
+
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.6fr);gap:16px}
+.metric{padding:14px 16px}
+.mhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mtitle{font-weight:700}
+.mval{font-size:40px;font-weight:800;line-height:1.1;margin:6px 0 6px;font-variant-numeric:tabular-nums;transition:color .2s}
+.dots{display:flex;flex-wrap:wrap;gap:4px;min-height:10px}
+.dots i{width:10px;height:10px;border-radius:3px;background:var(--line)}
+.dots i.f{background:currentColor}
+.mrule{margin-top:8px;font-size:12.5px;color:var(--muted)}
+.metric.zero .mval{color:var(--red)}
+.metric.zero .mrule{color:var(--red);font-weight:700}
+#mEmpty{color:var(--green)} #mFull{color:var(--box)}
+:root[data-theme="dark"] #mFull{color:#8fa2ff}
+.metric .mtitle,.metric .mrule,.metric .mhead{color:var(--ink)}
+.metric .mrule{color:var(--muted)}
+.lock{display:flex;align-items:center;gap:12px;margin:8px 0 4px}
+.lock svg{width:46px;height:46px}
+.lock .lk-txt{font-weight:700}
+#mMutex.locked .lk-txt{color:var(--red)} #mMutex .lk-txt{color:var(--green)}
+.chart{padding:14px 16px;display:flex;flex-direction:column}
+.chart svg{width:100%;height:92px;margin-top:8px;display:block}
+.stats{display:flex;gap:18px;margin-top:10px;font-size:13px;color:var(--muted)}
+.stats b{display:block;font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* bottom */
+.bottom{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
+.logc{padding:14px 16px}
+.log{list-style:none;margin:10px 0 0;padding:0;max-height:220px;overflow:auto;font-size:13.5px}
+.log li{display:flex;gap:10px;align-items:center;padding:6px 4px;border-bottom:1px dashed var(--line)}
+.log li:first-child{animation:fadein .3s}
+.log .t{font:12px ui-monospace,monospace;color:var(--muted);width:56px;flex:none}
+.tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;flex:none}
+.tag.in{background:var(--green-soft);color:var(--green)}
+.tag.out{background:var(--blue-soft);color:var(--blue)}
+.log .empty{color:var(--muted);justify-content:center;border:0;padding:24px 0}
+@keyframes fadein{from{opacity:0;transform:translateY(-4px)}}
+.rules{padding:14px 16px}
+.rule{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.rule:last-child{border:0}
+.rule .n{width:24px;height:24px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;flex:none;font-size:13px}
+.result{margin-top:10px;padding:12px;border-radius:12px;font-weight:600;display:none}
+.result.ok{display:block;background:var(--green-soft);color:var(--green)}
+.result.bad{display:block;background:var(--red-soft);color:var(--red)}
+
+/* waiting queues */
+.queue{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px;color:var(--muted);min-height:34px}
+.queue .ql{margin-right:2px}
+/* live code */
+.codec{padding:14px 16px}
+.codehead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.codeleg{display:flex;gap:6px}
+.code2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+.code-title{font:700 13.5px ui-monospace,"DejaVu Sans Mono",monospace;margin-bottom:6px}
+.code-title small{font-family:system-ui,sans-serif;font-weight:500}
+.code{list-style:none;margin:0;padding:6px 0;background:var(--gray-soft);border-radius:12px;font:13px/1.25 ui-monospace,"DejaVu Sans Mono",monospace}
+.code li{display:flex;align-items:center;gap:10px;padding:3px 10px;min-height:29px;border-left:3px solid transparent;transition:background .2s,border-color .2s}
+.code .ln{color:var(--muted);width:16px;text-align:right;flex:none;font-size:11px}
+.code .src{white-space:pre;color:var(--ink)}
+.code .cm{color:var(--muted);font-size:12px;font-family:system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.code .who{display:flex;gap:4px;flex:none}
+.code li.wait{background:var(--amber-soft);border-left-color:var(--amber)}
+.code li.wait .cm{color:var(--amber);font-weight:600}
+.code li.flash{background:var(--accent-soft);border-left-color:var(--accent)}
+.code li.on{border-left-color:var(--muted)}
+.tchip{font:700 11px system-ui,sans-serif;padding:2px 8px;border-radius:999px;background:var(--card);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.tchip.waiting{background:var(--amber);color:var(--card);border-color:transparent}
+.tchip.producing{background:var(--green);color:var(--card);border-color:transparent}
+.tchip.consuming{background:var(--blue);color:var(--card);border-color:transparent}
+.tchip.paused{background:var(--violet);color:var(--card);border-color:transparent}
+.tchip.flash{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.logc .result{margin:10px 0 0}
+/* flying letters, toast, dialog */
+#fly{position:fixed;inset:0;pointer-events:none;z-index:20}
+#fly svg{position:fixed;left:0;top:0;width:44px;height:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18))}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;opacity:0;transition:.25s;z-index:30;max-width:min(560px,90vw);box-shadow:var(--shadow)}
+#toast.show{opacity:1;transform:translateX(-50%)}
+#toast.err{background:var(--red);color:#fff}
+dialog{border:0;border-radius:20px;padding:0;max-width:880px;width:calc(100vw - 32px);background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(10,14,30,.45);backdrop-filter:blur(2px)}
+.dlg{padding:24px 28px;max-height:86vh;overflow:auto}
+.dlg h2{font-size:22px;text-transform:none;letter-spacing:-.01em;color:var(--ink);margin:0 0 6px}
+.dlg .lead{color:var(--muted);margin:0 0 18px;font-size:15px}
+.story{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.story .card{padding:14px;box-shadow:none}
+.story svg{width:100%;height:84px;display:block;margin-bottom:8px}
+.story h4{margin:0 0 4px;font-size:15px}
+.story p{margin:0;font-size:13.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:12px}
+.dlg-foot{display:flex;justify-content:flex-end;margin-top:18px}
+
+@media (max-width:1180px){
+  .layout{grid-template-columns:1fr}
+  .metrics{grid-template-columns:repeat(3,1fr)}
+  .metrics .chart{grid-column:1/-1}
+}
+@media (max-width:820px){
+  .top{flex-wrap:wrap;padding:12px 16px}
+  .top-right{flex-wrap:wrap}
+  .layout{padding:16px}
+  .scene{grid-template-columns:1fr}
+  .col.cons h3{justify-content:flex-start}
+  .cons .person{flex-direction:row;text-align:left}
+  .code2,.story{grid-template-columns:1fr}
+  .metrics{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="8" width="32" height="24" rx="8" fill="var(--box)"/><rect x="9" y="15" width="22" height="11" rx="2" fill="var(--paper)" stroke="var(--paper-edge)"/><path d="M9.5 15.5 L20 22 L30.5 15.5" fill="none" stroke="var(--paper-edge)" stroke-width="1.5"/><rect x="17" y="32" width="6" height="5" fill="var(--box-dark)"/></svg>
+    <div>
+      <h1>Шуудангийн хайрцаг</h1>
+      <p>Producer–Consumer · bounded buffer · F.CSM302 БД1</p>
+    </div>
+  </div>
+  <div class="top-right">
+    <span id="chip" class="chip">Хаалттай</span>
+    <span id="clock" class="clock">0.0 с</span>
+    <button id="helpBtn" class="btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.7"/><circle cx="12" cy="17.3" r=".6" fill="currentColor"/></svg>
+      Яаж ажилладаг вэ?
+    </button>
+    <button id="themeBtn" class="btn icon-btn" title="Өнгө солих (цайвар/бараан)" aria-label="Өнгө солих">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="panel">
+    <section class="card">
+      <h2>Тохиргоо</h2>
+      <div id="fields"></div>
+      <div style="font-size:13px;font-weight:600;margin:4px 0 6px">Бэлэн жишээ</div>
+      <div id="presets" class="presets"></div>
+      <label class="switch">
+        <span>Алхам алхмаар<small>«Нэг алхам» дарах бүрт урагшилна</small></span>
+        <span class="toggle"><input id="stepMode" type="checkbox"><span></span></span>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Удирдлага</h2>
+      <div class="controls">
+        <button id="bStart" class="btn primary wide"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>Эхлүүлэх</button>
+        <button id="bPause" class="btn"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><span>Түр зогсоох</span></button>
+        <button id="bStep" class="btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5v14l10-7z"/><rect x="16" y="5" width="3" height="14" rx="1"/></svg>Нэг алхам</button>
+        <button id="bStop" class="btn danger"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Зогсоох</button>
+        <button id="bReset" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>Шинэчлэх</button>
+      </div>
+      <div class="shortcuts"><span><kbd>Space</kbd> зогсоох/үргэлжлүүлэх</span><span><kbd>N</kbd> нэг алхам</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Өнгөний тайлбар</h2>
+      <div class="legend">
+        <div><span class="sw" style="background:var(--gray-soft)"></span>Амарч байна (sleep)</div>
+        <div><span class="sw" style="background:var(--green-soft)"></span>Захидал бичиж байна (produce)</div>
+        <div><span class="sw" style="background:var(--amber-soft)"></span>Хүлээж байна (wait)</div>
+        <div><span class="sw" style="background:var(--blue-soft)"></span>Захидал уншиж байна (consume)</div>
+        <div><span class="sw" style="background:var(--violet-soft)"></span>Түр зогссон (pause)</div>
+        <div><span class="sw" style="background:var(--slot);box-shadow:0 0 0 2px #ffb020"></span>Сүүлд өөрчлөгдсөн нүд</div>
+      </div>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <div class="card narr">
+      <div class="narr-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg></div>
+      <div>
+        <div id="narr" class="narr-main">Сайн уу! Зүүн талаас тохиргоогоо сонгоод «Эхлүүлэх» дарна уу.</div>
+        <div id="hint" class="narr-hint">Юу болж байгааг ойлгохгүй бол дээд буланд байрлах «Яаж ажилладаг вэ?» товчийг дарж үзээрэй.</div>
+      </div>
+    </div>
+
+    <div class="card scene">
+      <div class="col prod">
+        <h3><span class="dot" style="background:var(--green)"></span>Илгээгчид <small>producer</small></h3>
+        <div id="prods" class="people"></div>
+      </div>
+      <div class="boxwrap">
+        <h3>Шуудангийн хайрцаг <small id="boxSub">buffer</small></h3>
+        <div id="outRow" class="ptrs out"></div>
+        <div class="mailbox">
+          <div id="slots" class="slots"></div>
+          <div id="idxRow" class="idx"></div>
+        </div>
+        <div class="post"></div>
+        <div id="inRow" class="ptrs in"></div>
+        <div class="wrapnote">Сүүлийн нүдний дараа дахиад эхний нүднээс эхэлнэ (дугуй дараалал)</div>
+      </div>
+      <div class="col cons">
+        <h3><small>consumer</small> Хүлээн авагчид <span class="dot" style="background:var(--blue)"></span></h3>
+        <div id="cons" class="people"></div>
+      </div>
+      <div id="idle" class="idle">
+        <div>
+          <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="8" width="32" height="24" rx="8" fill="var(--box)"/><rect x="9" y="15" width="22" height="11" rx="2" fill="var(--paper)" stroke="var(--paper-edge)"/><path d="M9.5 15.5 L20 22 L30.5 15.5" fill="none" stroke="var(--paper-edge)" stroke-width="1.5"/><rect x="17" y="32" width="6" height="5" fill="var(--box-dark)"/></svg>
+          <h4>Шуудан хаалттай байна</h4>
+          <p>Тохиргоо эсвэл бэлэн жишээ сонгоод «Эхлүүлэх» дарна уу.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div id="mEmpty" class="card metric">
+        <div class="mhead"><span class="mtitle">Сул нүд</span><code>empty</code></div>
+        <div class="mval" id="vEmpty">–</div>
+        <div class="dots" id="dEmpty"></div>
+        <div class="mrule">0 болбол илгээгч хүлээнэ</div>
+        <div class="queue" id="qEmpty"></div>
+      </div>
+      <div id="mFull" class="card metric">
+        <div class="mhead"><span class="mtitle">Захидал</span><code>full</code></div>
+        <div class="mval" id="vFull">–</div>
+        <div class="dots" id="dFull"></div>
+        <div class="mrule">0 болбол хүлээн авагч хүлээнэ</div>
+        <div class="queue" id="qFull"></div>
+      </div>
+      <div id="mMutex" class="card metric" style="color:var(--green)">
+        <div class="mhead"><span class="mtitle">Түлхүүр</span><code>mutex</code></div>
+        <div class="lock">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path id="shackle" d="M15 22v-6a9 9 0 0 1 18 0v6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="9" y="21" width="30" height="22" rx="6" fill="currentColor"/><circle cx="24" cy="31" r="3" fill="var(--card)"/><rect x="22.5" y="31" width="3" height="6" rx="1.5" fill="var(--card)"/></svg>
+          <div class="lk-txt" id="lockTxt">Чөлөөтэй</div>
+        </div>
+        <div class="mrule">Нэг удаад ганцхан хүн хайрцгийг онгойлгоно</div>
+        <div class="queue" id="qMutex"></div>
+      </div>
+      <div class="card chart">
+        <div class="mhead"><span class="mtitle">Хайрцаг дахь захидлын тоо</span><small>сүүлийн 30 с</small></div>
+        <svg id="chart" viewBox="0 0 300 92" preserveAspectRatio="none" aria-label="График">
+          <line x1="0" y1="4" x2="300" y2="4" stroke="var(--red)" stroke-dasharray="4 4" stroke-width="1" vector-effect="non-scaling-stroke" opacity=".6"/>
+          <line x1="0" y1="88" x2="300" y2="88" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+          <path id="area" fill="var(--accent)" opacity=".14"/>
+          <path id="line" fill="none" stroke="var(--accent)" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+        </svg>
+        <div class="stats">
+          <div>Хийсэн<b id="sProd">0</b></div>
+          <div>Авсан<b id="sCons">0</b></div>
+          <div>Хайрцагт<b id="sIn">0</b></div>
+          <div style="margin-left:auto;text-align:right">Дүүрэн хязгаар<b id="sMax">–</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card codec">
+      <div class="codehead">
+        <h3>Код дээр яг одоо <small>thread бүр аль мөрөнд байна · сурах бичгийн Figure 7.1, 7.2</small></h3>
+        <div class="codeleg"><span class="tchip waiting">хүлээж байна</span><span class="tchip flash">хайрцагт хандаж байна</span></div>
+      </div>
+      <div class="code2">
+        <div><div class="code-title" style="color:var(--green)">producer() <small>илгээгч</small></div><ol class="code" id="codeP"></ol></div>
+        <div><div class="code-title" style="color:var(--blue)">consumer() <small>хүлээн авагч</small></div><ol class="code" id="codeC"></ol></div>
+      </div>
+    </div>
+
+    <div class="card logc">
+      <h3>Юу болсон бэ? <small>шинэ нь дээрээ</small></h3>
+      <div id="result" class="result"></div>
+      <ol id="log" class="log"><li class="empty">Одоохондоо юу ч болоогүй байна.</li></ol>
+    </div>
+  </section>
+</main>
+
+<div id="fly" aria-hidden="true"></div>
+<div id="toast" role="status"></div>
+
+<dialog id="help">
+  <div class="dlg">
+    <h2>Шуудангийн хайрцгийн үлгэр</h2>
+    <p class="lead">Гудамжинд цөөхөн нүдтэй, жижигхэн шуудангийн хайрцаг байдаг. Илгээгчид захидал бичээд хайрцагт хийдэг, хүлээн авагчид ирж захидлаа аваад уншдаг. Хүн бүр өөрийн хурдаар ажилладаг тул хоорондоо мөргөлдөхгүйн тулд гурван дүрэм сахидаг.</p>
+    <div class="story">
+      <div class="card">
+        <svg viewBox="0 0 200 84"><rect x="60" y="10" width="110" height="56" rx="12" fill="var(--box)"/><g fill="var(--paper)" stroke="var(--paper-edge)"><rect x="70" y="22" width="20" height="34" rx="3"/><rect x="95" y="22" width="20" height="34" rx="3"/><rect x="120" y="22" width="20" height="34" rx="3"/><rect x="145" y="22" width="20" height="34" rx="3"/></g><circle cx="26" cy="40" r="14" fill="var(--skin)"/><rect x="12" y="22" width="28" height="9" rx="3" fill="var(--box)"/><text x="26" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="var(--amber)">хүлээнэ</text></svg>
+        <h4>1. Дүүрсэн бол хүлээ</h4>
+        <p>Бүх нүд захидалтай бол илгээгч захидлаа барьсаар хүлээнэ. Газар хаяж болохгүй! Энэ нь <code>empty = 0</code> үед болдог.</p>
+      </div>
+      <div class="card">
+        <svg viewBox="0 0 200 84"><rect x="30" y="10" width="110" height="56" rx="12" fill="var(--box)"/><g fill="var(--slot)" stroke="var(--slot-line)"><rect x="40" y="22" width="20" height="34" rx="3"/><rect x="65" y="22" width="20" height="34" rx="3"/><rect x="90" y="22" width="20" height="34" rx="3"/><rect x="115" y="22" width="20" height="34" rx="3"/></g><circle cx="172" cy="40" r="14" fill="var(--skin)"/><path d="M158 36a14 14 0 0 1 28 0z" fill="#0ea5e9"/><text x="172" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="var(--amber)">хүлээнэ</text></svg>
+        <h4>2. Хоосон бол хүлээ</h4>
+        <p>Нэг ч захидал байхгүй бол хүлээн авагч захидал ирэхийг хүлээнэ. Байхгүй захидал авч болохгүй! Энэ нь <code>full = 0</code> үед болдог.</p>
+      </div>
+      <div class="card">
+        <svg viewBox="0 0 200 84"><g transform="translate(76 8)"><path d="M10 26v-8a14 14 0 0 1 28 0v8" fill="none" stroke="var(--red)" stroke-width="6" stroke-linecap="round"/><rect x="2" y="24" width="44" height="34" rx="8" fill="var(--red)"/><circle cx="24" cy="39" r="4" fill="var(--card)"/></g><circle cx="38" cy="44" r="13" fill="var(--skin)"/><circle cx="162" cy="44" r="13" fill="var(--skin)"/><text x="100" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="var(--red)">ганцхан түлхүүр</text></svg>
+        <h4>3. Ганцхан түлхүүр</h4>
+        <p>Хайрцгийн түлхүүр ганцхан. Түлхүүртэй хүн л хайрцгийг онгойлгоно. Хоёр хүн зэрэг гараа хийвэл захидал холилдоно. Үүнийг <code>mutex</code> хамгаалдаг.</p>
+      </div>
+    </div>
+    <p style="margin:0 0 16px;font-size:14px">Хамгийн түрүүнд хийсэн захидлыг хамгийн түрүүнд авна (<b>FIFO</b>). Сүүлийн нүдэнд хүрвэл дахиад эхний нүднээс эхэлнэ (<b>дугуй дараалал</b>, <code>(i + 1) % size</code>). Эдгээр дүрмийг сахивал захидал хэзээ ч алга болохгүй, хоёр удаа уншигдахгүй.</p>
+    <table>
+      <thead><tr><th>Үлгэрт</th><th>Үйлдлийн системд</th><th>Манай кодонд</th></tr></thead>
+      <tbody>
+        <tr><td>Илгээгч</td><td>Producer thread</td><td><code>Worker(kind="producer")</code></td></tr>
+        <tr><td>Хүлээн авагч</td><td>Consumer thread</td><td><code>Worker(kind="consumer")</code></td></tr>
+        <tr><td>Шуудангийн хайрцаг</td><td>Bounded buffer</td><td><code>BoundedBuffer.slots[]</code></td></tr>
+        <tr><td>Дугаартай захидал</td><td>Item</td><td><code>random.randint(1, 99)</code></td></tr>
+        <tr><td>Сул нүдний тоо</td><td>empty semaphore</td><td><code>Semaphore(size)</code></td></tr>
+        <tr><td>Хайрцаг дахь захидлын тоо</td><td>full semaphore</td><td><code>Semaphore(0)</code></td></tr>
+        <tr><td>Хайрцгийн түлхүүр</td><td>mutex lock</td><td><code>threading.Lock()</code></td></tr>
+        <tr><td>Захидал хийх / авах</td><td>insert_item / remove_item</td><td>0 эсвэл -1 буцаана</td></tr>
+        <tr><td>Хүлээх</td><td>Semaphore дээр блоклогдох</td><td><code>sem.acquire()</code></td></tr>
+      </tbody>
+    </table>
+    <div class="dlg-foot"><button class="btn primary" id="helpClose">Ойлголоо</button></div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const FIELDS = [
+  {key:"size",   label:"Хайрцгийн нүд",    tech:"buffer size",     min:1, max:20, step:1,   def:5},
+  {key:"prod",   label:"Илгээгч",     tech:"producers",       min:1, max:10, step:1,   def:2},
+  {key:"cons",   label:"Хүлээн авагч",           tech:"consumers",       min:1, max:10, step:1,   def:2},
+  {key:"psleep", label:"Илгээгчийн амралт",  tech:"max секунд",      min:0, max:10, step:0.1, def:1.0},
+  {key:"csleep", label:"Хүлээн авагчийн амралт",  tech:"max секунд",      min:0, max:10, step:0.1, def:1.0},
+];
+const PRESETS = [
+  {name:"Тэнцүү",                 v:{size:5,  prod:2, cons:2, psleep:1.0, csleep:1.0}},
+  {name:"Хайрцаг дүүрнэ",         v:{size:5,  prod:4, cons:1, psleep:0.3, csleep:2.0}},
+  {name:"Хайрцаг хоосорно",       v:{size:5,  prod:1, cons:4, psleep:2.0, csleep:0.3}},
+  {name:"1 нүдтэй",               v:{size:1,  prod:3, cons:3, psleep:0.5, csleep:0.5}},
+  {name:"Олон хүн",               v:{size:12, prod:6, cons:6, psleep:0.8, csleep:0.8}},
+];
+const ST = {
+  idle:      ["Бэлэн",                   "Бэлэн"],
+  sleeping:  ["Амарч байна",             "Амарч байна"],
+  producing: ["Захидал бичиж байна",    ""],
+  waiting:   ["Хүлээж байна",            "Хүлээж байна"],
+  consuming: ["",                        "Захидал уншиж байна"],
+  paused:    ["Түр зогссон",             "Түр зогссон"],
+  stopped:   ["Зогссон",                 "Зогссон"],
+};
+const FLY_MS = 560, HIST_S = 30;
+const CODE = {
+  P: [["while (true) {", ""],
+      ["  sleep(random)", "амарна", "sleep"],
+      ["  item = rand()", "захидал бичнэ", "make"],
+      ["  wait(empty)", "сул нүд байхгүй бол энд хүлээнэ", "wsem"],
+      ["  lock(mutex)", "түлхүүр чөлөөлөгдөхийг хүлээнэ", "lock"],
+      ["  buffer[in] = item", "захидлыг нүдэнд хийнэ", "c1"],
+      ["  in = (in + 1) % N", "дараагийн нүд (дугуй)", "c2"],
+      ["  unlock(mutex)", "түлхүүрээ буцаана", "c3"],
+      ["  signal(full)", "захидлын тоо +1", "c4"],
+      ["}", ""]],
+  C: [["while (true) {", ""],
+      ["  sleep(random)", "амарна", "sleep"],
+      ["  wait(full)", "захидал байхгүй бол энд хүлээнэ", "wsem"],
+      ["  lock(mutex)", "түлхүүр чөлөөлөгдөхийг хүлээнэ", "lock"],
+      ["  item = buffer[out]", "захидлыг нүднээс авна", "c1"],
+      ["  out = (out + 1) % N", "дараагийн нүд (дугуй)", "c2"],
+      ["  unlock(mutex)", "түлхүүрээ буцаана", "c3"],
+      ["  signal(empty)", "сул нүдний тоо +1", "c4"],
+      ["  consume(item)", "захидлаа уншина", "use"],
+      ["}", ""]],
+};
+let flashes = [];   // {side, who, until}
+
+/* ---------- small svg builders ---------- */
+function envSVG(n, cls){
+  const t = n === undefined || n === null ? "" :
+    `<text x="30" y="36.5" text-anchor="middle" font-size="13" font-weight="800" fill="#22307c" font-family="system-ui,sans-serif">${n}</text>`;
+  return `<svg class="${cls||"env"}" viewBox="0 0 60 42"><rect x="1.5" y="1.5" width="57" height="39" rx="4" fill="var(--paper)" stroke="var(--paper-edge)" stroke-width="2"/><path d="M2.5 3 L30 22 L57.5 3" fill="none" stroke="var(--paper-edge)" stroke-width="2" stroke-linejoin="round"/><rect x="45" y="6" width="9" height="10" rx="1.5" fill="var(--stamp)"/>${t}</svg>`;
+}
+function faceSVG(kind){
+  const eyes = `<g class="eyes-o" fill="#3b2a20"><circle cx="16.3" cy="23" r="1.5"/><circle cx="23.7" cy="23" r="1.5"/></g>
+    <g class="eyes-c" stroke="#3b2a20" stroke-width="1.4" stroke-linecap="round"><path d="M14.5 23.3h3.4M22 23.3h3.4"/></g>
+    <path d="M16.5 27.6q3.5 2.6 7 0" stroke="#3b2a20" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+  if (kind === "P") return `<svg viewBox="0 0 40 40"><circle cx="20" cy="23" r="11" fill="var(--skin)"/>${eyes}
+    <rect x="8.5" y="9" width="23" height="8.5" rx="3" fill="var(--box)"/><rect x="19" y="14.6" width="15" height="3.6" rx="1.8" fill="var(--box-dark)"/>
+    <rect x="17.5" y="10.8" width="5" height="4" rx="1" fill="#ffd166"/></svg>`;
+  return `<svg viewBox="0 0 40 40"><circle cx="20" cy="23" r="11" fill="var(--skin)"/>${eyes}
+    <path d="M9 21a11 11 0 0 1 22 0z" fill="#0ea5e9"/><rect x="5" y="18.5" width="11" height="3.4" rx="1.7" fill="#0369a1"/><circle cx="20" cy="10.5" r="1.8" fill="#0369a1"/></svg>`;
+}
+
+/* ---------- live code panel ---------- */
+function buildCode(){
+  for (const side of ["P", "C"]){
+    $("#code" + side).innerHTML = CODE[side].map((l, i) =>
+      `<li data-k="${l[2] || ""}"><span class="ln">${i + 1}</span><span class="src">${l[0]}</span>` +
+      `<span class="cm">${l[1] ? "// " + l[1] : ""}</span><span class="who"></span></li>`).join("");
+  }
+}
+function lineOf(name, st, s){
+  const prod = name[0] === "P";
+  if (st === "sleeping") return "sleep";
+  if (st === "producing" || (st === "paused" && prod)) return "make";
+  if (st === "paused") return "sleep";
+  if (st === "consuming") return "use";
+  if (st === "waiting") return (prod ? s.empty : s.full) === 0 ? "wsem" : "lock";
+  return null;
+}
+function renderCode(s){
+  const now = performance.now();
+  flashes = flashes.filter(f => f.until > now);
+  for (const side of ["P", "C"]){
+    const at = {};
+    if (s) for (const [n, st] of Object.entries(s.states)){
+      if (n[0] !== side) continue;
+      const k = lineOf(n, st, s);
+      if (k) (at[k] = at[k] || []).push([n, st]);
+    }
+    const fl = flashes.filter(f => f.side === side);
+    $("#code" + side).querySelectorAll("li").forEach(li => {
+      const k = li.dataset.k;
+      const list = (at[k] || []).map(([n, st]) => `<span class="tchip ${st}">${n}</span>`);
+      const hot = k && k[0] === "c" && fl.length;
+      if (hot && k === "c1") fl.forEach(f => list.push(`<span class="tchip flash">${f.who}</span>`));
+      const html = list.join("");
+      const w = li.querySelector(".who");
+      if (w.innerHTML !== html) w.innerHTML = html;
+      li.classList.toggle("wait", (k === "wsem" || k === "lock") && !!at[k]);
+      li.classList.toggle("flash", !!hot);
+      li.classList.toggle("on", !!at[k] && k !== "wsem" && k !== "lock");
+    });
+  }
+}
+function renderQueues(s){
+  const q = (id, names, empty) => {
+    $(id).innerHTML = `<span class="ql">Хүлээж буй:</span>` +
+      (names.length ? names.map(n => `<span class="tchip waiting">${n}</span>`).join("") : `<span>${empty}</span>`);
+  };
+  if (!s){ for (const id of ["#qEmpty", "#qFull", "#qMutex"]) $(id).innerHTML = ""; return; }
+  const W = Object.entries(s.states).filter(([, st]) => st === "waiting").map(([n]) => n);
+  const onEmpty = s.stopped ? [] : W.filter(n => n[0] === "P" && s.empty === 0);
+  const onFull = s.stopped ? [] : W.filter(n => n[0] === "C" && s.full === 0);
+  const onLock = s.stopped ? [] : W.filter(n => !onEmpty.includes(n) && !onFull.includes(n));
+  q("#qEmpty", onEmpty, "хэн ч биш");
+  q("#qFull", onFull, "хэн ч биш");
+  q("#qMutex", onLock, "хэн ч биш");
+}
+
+/* ---------- settings panel ---------- */
+const inputs = {};
+function buildFields(){
+  const box = $("#fields");
+  for (const f of FIELDS){
+    const d = document.createElement("div");
+    d.className = "field";
+    d.innerHTML = `<div class="field-top"><label for="n_${f.key}">${f.label}<small>${f.tech} · ${f.min}–${f.max}</small></label>
+      <input id="n_${f.key}" class="num" type="number" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}"></div>
+      <input id="r_${f.key}" type="range" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}" aria-label="${f.label}">`;
+    box.appendChild(d);
+    const num = d.querySelector(".num"), rng = d.querySelector("input[type=range]");
+    rng.addEventListener("input", () => { num.value = rng.value; num.classList.remove("bad"); clearPreset(); });
+    num.addEventListener("input", () => {
+      const x = Number(num.value);
+      const ok = num.value.trim() !== "" && !isNaN(x) && x >= f.min && x <= f.max && (f.step !== 1 || Number.isInteger(x));
+      num.classList.toggle("bad", !ok);
+      if (ok) rng.value = x;
+      clearPreset();
+    });
+    inputs[f.key] = {num, rng, f};
+  }
+  const pbox = $("#presets");
+  PRESETS.forEach((p, i) => {
+    const b = document.createElement("button");
+    b.className = "preset"; b.textContent = p.name; b.dataset.i = i;
+    b.onclick = () => { setValues(p.v); clearPreset(); b.classList.add("on"); };
+    pbox.appendChild(b);
+  });
+}
+function clearPreset(){ document.querySelectorAll(".preset.on").forEach(b => b.classList.remove("on")); }
+function setValues(v){
+  for (const k in v){ const it = inputs[k]; it.num.value = v[k]; it.rng.value = v[k]; it.num.classList.remove("bad"); }
+}
+function readValues(){
+  const o = {};
+  for (const k in inputs) o[k] = inputs[k].num.value;
+  o.paused = $("#stepMode").checked;
+  return o;
+}
+function setInputsEnabled(on){
+  for (const k in inputs){ inputs[k].num.disabled = !on; inputs[k].rng.disabled = !on; }
+  document.querySelectorAll(".preset").forEach(b => b.disabled = !on);
+  $("#stepMode").disabled = !on;
+}
+
+/* ---------- api ---------- */
+async function api(path, body){
+  try{
+    const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body || {})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok){ toast(d.error || "Алдаа гарлаа", true); return false; }
+    return true;
+  }catch(e){ toast("Сервертэй холбогдож чадсангүй. Терминал дээр gui.py ажиллаж байгаа эсэхийг шалгана уу.", true); return false; }
+}
+let toastTimer;
+function toast(msg, err){
+  const t = $("#toast"); t.textContent = msg; t.className = "show" + (err ? " err" : "");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = "", err ? 5000 : 2600);
+}
+
+/* ---------- view state ---------- */
+let run = -1, seq = 0, sim = null, layoutKey = "", hist = [], pendingIn = {}, logCount = 0, lastEventAt = 0;
+
+function resetView(){
+  layoutKey = ""; hist = []; pendingIn = {}; logCount = 0; flashes = [];
+  $("#log").innerHTML = `<li class="empty">Одоохондоо юу ч болоогүй байна.</li>`;
+  $("#result").className = "result"; $("#result").textContent = "";
+  $("#fly").innerHTML = "";
+}
+
+function buildLayout(s){
+  const names = Object.keys(s.states);
+  const P = names.filter(n => n[0] === "P"), C = names.filter(n => n[0] === "C");
+  const person = (n, kind) => `<div class="person" data-n="${n}" data-st="idle"><div class="avatar">${faceSVG(kind)}</div>
+      <div class="pinfo"><div class="pname">${n}</div><div class="pstate">Бэлэн</div></div><div class="hold">${envSVG(null,"")}</div></div>`;
+  $("#prods").innerHTML = P.map(n => person(n, "P")).join("");
+  $("#cons").innerHTML = C.map(n => person(n, "C")).join("");
+  const n = s.slots.length, cols = `repeat(${n}, minmax(0,1fr))`;
+  for (const id of ["#slots", "#idxRow", "#outRow", "#inRow"]) $(id).style.gridTemplateColumns = cols;
+  $("#slots").innerHTML = s.slots.map((_, i) => `<div class="slot" data-i="${i}"></div>`).join("");
+  $("#idxRow").innerHTML = s.slots.map((_, i) => `<div>${i}</div>`).join("");
+  $("#outRow").innerHTML = s.slots.map(() => `<div class="ptr"><span>авах ▼ out</span></div>`).join("");
+  $("#inRow").innerHTML = s.slots.map(() => `<div class="ptr"><span>▲ in хийх</span></div>`).join("");
+  $("#boxSub").textContent = `buffer · ${n} нүд`;
+  $("#sMax").textContent = n;
+  const dots = k => Array.from({length:n}, () => "<i></i>").join("");
+  $("#dEmpty").innerHTML = dots(); $("#dFull").innerHTML = dots();
+  layoutKey = n + "|" + names.join(",");
+}
+
+function stateText(name, st, s){
+  const prod = name[0] === "P";
+  if (st === "waiting"){
+    if (prod && s.empty === 0) return "Дүүрэн! Хүлээж байна";
+    if (!prod && s.full === 0) return "Хоосон! Хүлээж байна";
+    return "Түлхүүр хүлээж байна";
+  }
+  const t = ST[st] || ST.idle;
+  return prod ? t[0] : t[1];
+}
+
+function render(d){
+  const s = d.sim;
+  sim = s;
+  const chip = $("#chip");
+  $("#idle").style.display = s ? "none" : "grid";
+  if (!s){
+    chip.className = "chip"; chip.textContent = "Хаалттай"; $("#clock").textContent = "0.0 с";
+    renderCode(null); renderQueues(null);
+    updateButtons(null); return;
+  }
+  if (layoutKey !== s.slots.length + "|" + Object.keys(s.states).join(",")) buildLayout(s);
+
+  chip.className = "chip " + (s.stopped ? "stop" : s.paused ? "pause" : "run");
+  chip.textContent = s.stopped ? "Зогссон" : s.paused ? "Түр зогссон" : "Ажиллаж байна";
+  $("#clock").textContent = s.elapsed.toFixed(1) + " с";
+
+  // people
+  document.querySelectorAll(".person").forEach(el => {
+    const n = el.dataset.n, st = s.states[n] || "idle";
+    if (el.dataset.st !== st) el.dataset.st = st;
+    const txt = stateText(n, st, s);
+    const ps = el.querySelector(".pstate");
+    if (ps.textContent !== txt) ps.textContent = txt;
+  });
+
+  // slots
+  const now = performance.now();
+  document.querySelectorAll("#slots .slot").forEach((el, i) => {
+    const v = s.slots[i];
+    const show = v !== null && !(pendingIn[i] && pendingIn[i] > now);
+    const want = show ? String(v) : "";
+    if (el.dataset.v !== want){ el.dataset.v = want; el.innerHTML = show ? envSVG(v) : ""; }
+    el.classList.toggle("last", i === s.last);
+  });
+  document.querySelectorAll("#outRow .ptr").forEach((el, i) => el.classList.toggle("on", i === s.out_idx));
+  document.querySelectorAll("#inRow .ptr").forEach((el, i) => el.classList.toggle("on", i === s.in_idx));
+
+  // semaphores
+  const n = s.slots.length;
+  setMetric("#mEmpty", "#vEmpty", "#dEmpty", s.empty, n);
+  setMetric("#mFull", "#vFull", "#dFull", s.full, n);
+  $("#mMutex").classList.toggle("locked", s.mutex_locked);
+  $("#mMutex").style.color = s.mutex_locked ? "var(--red)" : "var(--green)";
+  $("#shackle").setAttribute("d", s.mutex_locked ? "M15 22v-6a9 9 0 0 1 18 0v6" : "M15 22v-6a9 9 0 0 1 18 0v-3");
+  $("#shackle").setAttribute("transform", s.mutex_locked ? "" : "translate(0 -4)");
+  $("#lockTxt").textContent = s.mutex_locked ? "Нэг хүн онгойлгосон байна" : "Чөлөөтэй";
+
+  // stats + chart
+  $("#sProd").textContent = s.produced; $("#sCons").textContent = s.consumed;
+  $("#sIn").textContent = s.produced - s.consumed;
+  if (!s.stopped){
+    const t = s.elapsed;
+    if (!hist.length || t - hist[hist.length-1][0] >= 0.15) hist.push([t, s.full]);
+    while (hist.length && t - hist[0][0] > HIST_S) hist.shift();
+  }
+  drawChart(n, s.elapsed);
+  renderCode(s);
+  renderQueues(s);
+
+  // hint line
+  const st = Object.entries(s.states);
+  const pw = st.filter(([k, v]) => k[0] === "P" && v === "waiting").length;
+  const cw = st.filter(([k, v]) => k[0] === "C" && v === "waiting").length;
+  const hint = $("#hint");
+  let h = "", warn = false;
+  if (s.stopped) h = "Шуудан хаагдлаа. Дахин эхлүүлэх бол «Эхлүүлэх» эсвэл «Шинэчлэх» дарна уу.";
+  else if (s.paused) h = "Түр зогссон байна. «Нэг алхам» дарвал нэг хүн нэг алхам хийнэ, «Үргэлжлүүлэх» дарвал цааш явна.";
+  else if (s.empty === 0 && pw){ h = `Хайрцаг дүүрэн! ${pw} илгээгч сул нүд гарахыг хүлээж байна (empty = 0).`; warn = true; }
+  else if (s.full === 0 && cw){ h = `Хайрцаг хоосон! ${cw} хүлээн авагч захидал ирэхийг хүлээж байна (full = 0).`; warn = true; }
+  else h = `Хайрцагт ${s.full} захидал, ${s.empty} сул нүд байна. Бүх зүйл хэвийн урсаж байна.`;
+  hint.textContent = h; hint.classList.toggle("warn", warn);
+
+  // result
+  if (s.stopped){
+    const left = s.slots.filter(x => x !== null).length, ok = s.produced - s.consumed === left;
+    const r = $("#result");
+    r.className = "result " + (ok ? "ok" : "bad");
+    r.textContent = ok ? `Шалгалт: ${s.produced} хийсэн − ${s.consumed} авсан = ${left} хайрцагт үлдсэн. Нэг ч захидал алга болоогүй!`
+                       : `Шалгалт: ${s.produced} − ${s.consumed} ≠ ${left}. Тоо таарахгүй байна!`;
+    if (performance.now() - lastEventAt > 300 && !$("#narr").dataset.done){
+      $("#narr").textContent = "Шуудан хаагдлаа. Бүх thread зогслоо.";
+      $("#narr").dataset.done = "1";
+    }
+  }
+  updateButtons(s);
+}
+
+function setMetric(card, val, dots, v, n){
+  $(val).textContent = v;
+  $(card).classList.toggle("zero", v === 0);
+  $(dots).querySelectorAll("i").forEach((el, i) => el.classList.toggle("f", i < v));
+}
+
+function drawChart(n, now){
+  if (hist.length < 2){ $("#line").setAttribute("d", ""); $("#area").setAttribute("d", ""); return; }
+  const x = t => 300 - (now - t) / HIST_S * 300, y = v => 88 - v / n * 84;
+  let d = "";
+  hist.forEach(([t, v], i) => {
+    const px = Math.max(0, x(t)).toFixed(1), py = y(v).toFixed(1);
+    if (i === 0) d = `M${px} ${py}`;
+    else d += ` H${px} V${py}`;   // step line: values change in jumps
+  });
+  d += ` H300`;
+  $("#line").setAttribute("d", d);
+  $("#area").setAttribute("d", d + ` V88 H${Math.max(0, x(hist[0][0])).toFixed(1)} Z`);
+}
+
+function updateButtons(s){
+  const live = s && !s.stopped;
+  $("#bStart").disabled = !!live;
+  $("#bPause").disabled = !live;
+  $("#bStep").disabled = !live;
+  $("#bStop").disabled = !live;
+  $("#bPause").querySelector("span").textContent = s && s.paused && live ? "Үргэлжлүүлэх" : "Түр зогсоох";
+  setInputsEnabled(!live);
+}
+
+/* ---------- events: log, narration, flying letters ---------- */
+function handleEvent(e){
+  lastEventAt = performance.now();
+  const ins = e.kind === "insert";
+  flashes.push({side: ins ? "P" : "C", who: e.who, until: performance.now() + 700});
+  $("#narr").innerHTML = ins
+    ? `Илгээгч <b>${e.who}</b> <b>${e.item}</b> дугаартай захидлыг <b>${e.slot}-р</b> нүдэнд хийлээ.`
+    : `Хүлээн авагч <b>${e.who}</b> <b>${e.slot}-р</b> нүднээс <b>${e.item}</b> дугаартай захидлыг авлаа.`;
+  delete $("#narr").dataset.done;
+  const log = $("#log");
+  if (!logCount) log.innerHTML = "";
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="t">${e.t.toFixed(2)} с</span><span class="tag ${ins ? "in" : "out"}">${ins ? "insert" : "remove"}</span>
+    <span>${ins ? `<b>${e.who}</b> ${e.item} дугаартай захидлыг <b>${e.slot}-р</b> нүдэнд хийв` : `<b>${e.who}</b> <b>${e.slot}-р</b> нүднээс ${e.item} дугаартай захидлыг авав`}</span>`;
+  log.prepend(li); logCount++;
+  while (log.children.length > 200) log.lastChild.remove();
+  fly(e);
+}
+
+function centerOf(el){ const r = el.getBoundingClientRect(); return [r.left + r.width/2, r.top + r.height/2]; }
+function fly(e){
+  if (document.hidden) return;
+  const person = document.querySelector(`.person[data-n="${e.who}"] .avatar`);
+  const slot = document.querySelector(`#slots .slot[data-i="${e.slot}"]`);
+  if (!person || !slot) return;
+  const ins = e.kind === "insert";
+  const [ax, ay] = centerOf(ins ? person : slot), [bx, by] = centerOf(ins ? slot : person);
+  if (ins) pendingIn[e.slot] = performance.now() + FLY_MS;
+  const holder = document.createElement("div");
+  holder.innerHTML = envSVG(e.item, "");
+  const el = holder.firstChild;
+  $("#fly").appendChild(el);
+  const w = 44, h = 31, mx = (ax + bx) / 2, my = Math.min(ay, by) - 46;
+  const at = (x, y, s) => `translate(${x - w/2}px, ${y - h/2}px) scale(${s})`;
+  const anim = el.animate([
+    {transform: at(ax, ay, .7), opacity: .4},
+    {transform: at(mx, my, 1.1), opacity: 1, offset: .5},
+    {transform: at(bx, by, .9), opacity: 1}
+  ], {duration: FLY_MS, easing: "cubic-bezier(.4,.0,.2,1)"});
+  anim.onfinish = () => { el.remove(); if (sim) render({sim}); };
+}
+
+/* ---------- polling loop ---------- */
+async function poll(){
+  try{
+    const r = await fetch("/api/state?since=" + seq, {cache: "no-store"});
+    const d = await r.json();
+    if (d.run !== run){ run = d.run; resetView(); }
+    for (const e of d.events) handleEvent(e);
+    seq = d.seq;
+    render(d);
+  }catch(e){ /* server busy or gone; try again */ }
+  setTimeout(poll, 110);
+}
+
+/* ---------- wiring ---------- */
+buildFields();
+buildCode();
+$("#bStart").onclick = async () => {
+  const bad = document.querySelector(".num.bad");
+  if (bad){ toast("Улаанаар тэмдэглэсэн утгыг засна уу. Зөвшөөрөгдөх хязгаарыг нэрийн доор бичсэн.", true); bad.focus(); return; }
+  if (await api("/api/start", readValues())){
+    toast($("#stepMode").checked ? "Алхам алхмаар горим: «Нэг алхам» дарна уу." : "Шуудан ажиллаж эхэллээ!");
+    $("#narr").textContent = "Шуудан нээгдлээ! Илгээгчид захидал хийж, хүлээн авагчид авч эхэллээ.";
+  }
+};
+$("#bPause").onclick = () => api(sim && sim.paused ? "/api/resume" : "/api/pause");
+$("#bStep").onclick = () => api("/api/step");
+$("#bStop").onclick = () => api("/api/stop");
+$("#bReset").onclick = async () => {
+  if (await api("/api/reset")){
+    setValues(Object.fromEntries(FIELDS.map(f => [f.key, f.def]))); clearPreset();
+    $("#stepMode").checked = false;
+    $("#narr").textContent = "Шинэчиллээ. Тохиргоогоо сонгоод «Эхлүүлэх» дарна уу.";
+  }
+};
+const dlg = $("#help");
+$("#helpBtn").onclick = () => dlg.showModal();
+$("#helpClose").onclick = () => dlg.close();
+dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+
+function applyTheme(t){ if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+let theme = null;
+try { theme = localStorage.getItem("pc-theme"); } catch(e){}
+if (!theme && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) theme = "dark";
+applyTheme(theme);
+$("#themeBtn").onclick = () => {
+  theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(theme);
+  try { localStorage.setItem("pc-theme", theme); } catch(e){}
+};
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input") || dlg.open) return;
+  if (e.code === "Space"){ e.preventDefault(); if (!$("#bPause").disabled) $("#bPause").click(); }
+  else if (e.key === "n" || e.key === "N"){ if (!$("#bStep").disabled) $("#bStep").click(); }
+});
+poll();
+</script>
+</body>
+</html>

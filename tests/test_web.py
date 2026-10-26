@@ -1,0 +1,105 @@
+"""Tests for the web UI server (src/gui.py): real HTTP calls against a local server."""
+import json
+import os
+import sys
+import threading
+import time
+import unittest
+import urllib.error
+import urllib.request
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+import gui  # noqa: E402
+
+
+class TestWebUI(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.srv, cls.ctl = gui.serve("127.0.0.1", 0)
+        cls.base = f"http://127.0.0.1:{cls.srv.server_address[1]}"
+        threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.ctl.stop()
+        cls.srv.shutdown()
+        cls.srv.server_close()
+
+    def post(self, path, body=None):
+        req = urllib.request.Request(self.base + path, data=json.dumps(body or {}).encode(),
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req) as r:
+                return r.status, json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read())
+
+    def state(self, since=0):
+        with urllib.request.urlopen(f"{self.base}/api/state?since={since}") as r:
+            return json.loads(r.read())
+
+    def tearDown(self):
+        self.post("/api/reset")
+
+    def test_page_served(self):
+        with urllib.request.urlopen(self.base + "/") as r:
+            self.assertEqual(r.status, 200)
+            self.assertIn("Шуудангийн хайрцаг".encode(), r.read())
+
+    def test_run_events_and_consistency(self):
+        code, _ = self.post("/api/start", dict(size=3, prod=3, cons=2, psleep=0.05, csleep=0.05))
+        self.assertEqual(code, 200)
+        time.sleep(1.5)
+        self.post("/api/stop")
+        s = self.state()
+        sim = s["sim"]
+        self.assertTrue(sim["stopped"])
+        left = sum(x is not None for x in sim["slots"])
+        self.assertEqual(sim["produced"] - sim["consumed"], left)
+        ins = sum(e["kind"] == "insert" for e in s["events"])
+        rem = sum(e["kind"] == "remove" for e in s["events"])
+        self.assertEqual((ins, rem), (sim["produced"], sim["consumed"]))
+
+    def test_since_returns_only_new_events(self):
+        self.post("/api/start", dict(size=2, prod=2, cons=2, psleep=0.02, csleep=0.02))
+        time.sleep(0.6)
+        first = self.state()
+        later = self.state(first["seq"])
+        self.assertTrue(all(e["seq"] > first["seq"] for e in later["events"]))
+
+    def test_invalid_input_rejected_in_mongolian(self):
+        for body in [dict(size=0, prod=1, cons=1, psleep=1, csleep=1),
+                     dict(size="abc", prod=1, cons=1, psleep=1, csleep=1),
+                     dict(size=5, prod=1, cons=99, psleep=1, csleep=1),
+                     dict(size=5, prod=1, cons=1, psleep=-1, csleep=1)]:
+            code, d = self.post("/api/start", body)
+            self.assertEqual(code, 400, body)
+            self.assertIn("байх ёстой", d["error"])
+
+    def test_cannot_start_twice(self):
+        self.post("/api/start", dict(size=5, prod=1, cons=1, psleep=1, csleep=1))
+        code, _ = self.post("/api/start", dict(size=5, prod=1, cons=1, psleep=1, csleep=1))
+        self.assertEqual(code, 400)
+
+    def test_pause_step_resume(self):
+        self.post("/api/start", dict(size=5, prod=2, cons=2, psleep=0, csleep=0, paused=True))
+        time.sleep(0.4)
+        s = self.state()["sim"]
+        self.assertTrue(s["paused"])
+        before = s["produced"] + s["consumed"]
+        for _ in range(4):
+            self.post("/api/step")
+            time.sleep(0.5)
+        s = self.state()["sim"]
+        self.assertGreater(s["produced"] + s["consumed"], before)
+        self.post("/api/resume")
+        self.assertFalse(self.state()["sim"]["paused"])
+
+    def test_reset_clears(self):
+        self.post("/api/start", dict(size=5, prod=1, cons=1, psleep=0.1, csleep=0.1))
+        self.post("/api/reset")
+        self.assertIsNone(self.state()["sim"])
+
+
+if __name__ == "__main__":
+    unittest.main()
