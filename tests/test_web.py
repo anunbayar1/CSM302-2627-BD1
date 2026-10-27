@@ -95,6 +95,36 @@ class TestWebUI(unittest.TestCase):
         self.post("/api/resume")
         self.assertFalse(self.state()["sim"]["paused"])
 
+    def test_live_tune(self):
+        code, _ = self.post("/api/tune", dict(speed=2))
+        self.assertEqual(code, 400)                      # nothing running yet
+        self.post("/api/start", dict(size=5, prod=2, cons=2, psleep=1, csleep=1, speed=0.5))
+        self.assertEqual(self.state()["sim"]["speed"], 0.5)
+        code, _ = self.post("/api/tune", dict(speed=4, psleep=0.2, csleep=0.3))
+        self.assertEqual(code, 200)
+        sim = self.state()["sim"]
+        self.assertEqual((sim["speed"], sim["prod_sleep"], sim["cons_sleep"]), (4.0, 0.2, 0.3))
+        code, d = self.post("/api/tune", dict(speed=99))
+        self.assertEqual(code, 400)
+        self.assertIn("Хурд", d["error"])
+        code, _ = self.post("/api/tune", dict(psleep=-5))
+        self.assertEqual(code, 400)
+
+    def test_tour_and_voice_files(self):
+        with urllib.request.urlopen(self.base + "/tour.json") as r:
+            tour = json.loads(r.read())
+        for ex in tour["themes"]:
+            steps = tour["themes"][ex]
+            self.assertGreater(len(steps), 10)
+            self.assertTrue(all(st["text"] for st in steps))
+        self.assertEqual(list(tour["themes"]), ["mail"])
+        with urllib.request.urlopen(self.base + "/voice/manifest.json") as r:
+            self.assertIsInstance(json.loads(r.read()), dict)
+        for bad in ("/voice/../gui.py", "/voice/%2e%2e/gui.py", "/voice/x.py"):
+            with self.assertRaises(urllib.error.HTTPError, msg=bad) as cm:
+                urllib.request.urlopen(self.base + bad)
+            self.assertEqual(cm.exception.code, 404)
+
     def test_reset_clears(self):
         self.post("/api/start", dict(size=5, prod=1, cons=1, psleep=0.1, csleep=0.1))
         self.post("/api/reset")

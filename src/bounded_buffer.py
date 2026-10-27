@@ -114,10 +114,12 @@ class Worker(threading.Thread):
 
     def run(self):
         s = self.sim
-        limit = s.prod_sleep if self.kind == "producer" else s.cons_sleep
         while not s.stop.is_set():
+            # read the limits every round so they can be tuned while running
+            limit = s.prod_sleep if self.kind == "producer" else s.cons_sleep
             s.set_state(self.name, "sleeping")
-            if not s.sleep(random.uniform(0, limit)):
+            cap = (lambda: s.prod_sleep) if self.kind == "producer" else (lambda: s.cons_sleep)
+            if not s.sleep(random.uniform(0, limit), cap):
                 break
             if self.kind == "producer":
                 item = random.randint(1, 99)
@@ -146,6 +148,7 @@ class Simulation:
          self.prod_sleep, self.cons_sleep) = validate_params(
             buffer_size, producers, consumers, prod_sleep, cons_sleep)
         self.verbose = verbose
+        self.speed = 1.0          # global time multiplier (2.0 = twice as fast)
         self.stop = threading.Event()
         self.paused = threading.Event()
         self.step_sem = threading.Semaphore(0)
@@ -184,14 +187,22 @@ class Simulation:
         with self.lock:
             self.states[name] = state
 
-    def sleep(self, t):
-        end = time.monotonic() + t
-        while True:
-            left = end - time.monotonic()
-            if left <= 0:
-                return not self.stop.is_set()
-            if self.stop.wait(min(left, 0.05)):
+    def sleep(self, t, cap=None):
+        """Sleep `t` simulated seconds; returns False if the run was stopped.
+
+        Time runs `self.speed` times faster than real time, and `cap()` (the current
+        max sleep) shortens the remaining wait, so tuning applies immediately.
+        """
+        left, last = t, time.monotonic()
+        while left > 0:
+            if self.stop.wait(min(left / self.speed, 0.05)):
                 return False
+            now = time.monotonic()
+            left -= (now - last) * self.speed
+            last = now
+            if cap is not None:
+                left = min(left, cap())
+        return not self.stop.is_set()
 
     def checkpoint(self, name):
         """Gate used for Pause / Step. Returns False if the run was stopped."""
@@ -204,6 +215,25 @@ class Simulation:
         return False
 
     # controls
+    SPEED_MIN, SPEED_MAX = 0.25, 4.0
+
+    def set_speeds(self, prod_sleep=None, cons_sleep=None, speed=None):
+        """Change timing while the simulation runs. Raises ValueError on bad input."""
+        _, _, _, ps, cs = validate_params(
+            self.buffer_size, self.n_prod, self.n_cons,
+            self.prod_sleep if prod_sleep is None else prod_sleep,
+            self.cons_sleep if cons_sleep is None else cons_sleep)
+        if speed is not None:
+            try:
+                sp = float(str(speed).strip())
+            except ValueError:
+                raise ValueError(f"Speed must be a number (got {speed!r}).")
+            if not self.SPEED_MIN <= sp <= self.SPEED_MAX:
+                raise ValueError(f"Speed must be between {self.SPEED_MIN} and {self.SPEED_MAX} "
+                                 f"(got {sp}).")
+            self.speed = sp
+        self.prod_sleep, self.cons_sleep = ps, cs
+
     def start(self):
         self.t0 = time.monotonic()
         for w in self.workers:
@@ -236,7 +266,9 @@ class Simulation:
                         empty=empty_v, full=full_v, mutex_locked=b.mutex.locked(),
                         states=dict(self.states), produced=self.produced,
                         consumed=self.consumed, log=list(self.log_lines),
-                        paused=self.paused.is_set(), stopped=self.stop.is_set())
+                        paused=self.paused.is_set(), stopped=self.stop.is_set(),
+                        speed=self.speed, prod_sleep=self.prod_sleep,
+                        cons_sleep=self.cons_sleep)
 
 
 # ----------------------------------------------------------------------- CLI

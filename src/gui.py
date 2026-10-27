@@ -24,7 +24,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bounded_buffer import Simulation  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-INDEX = os.path.join(HERE, "ui", "index.html")
+UI_DIR = os.path.realpath(os.path.join(HERE, "ui"))
+INDEX = os.path.join(UI_DIR, "index.html")
 MAX_EVENTS = 5000
 
 # validate_params() speaks English; the UI speaks Mongolian.
@@ -32,8 +33,9 @@ FIELD_MN = {
     "Buffer size": "Хайрцгийн нүдний тоо (buffer size)",
     "Producers": "Илгээгчийн тоо (producers)",
     "Consumers": "Хүлээн авагчийн тоо (consumers)",
-    "Producer max sleep": "Илгээгчийн амралт (producer sleep)",
-    "Consumer max sleep": "Хүлээн авагчийн амралт (consumer sleep)",
+    "Producer max sleep": "Илгээгчийн амралт",
+    "Consumer max sleep": "Хүлээн авагчийн амралт",
+    "Speed": "Хурд",
 }
 
 
@@ -82,6 +84,8 @@ class Controller:
             try:
                 sim = Simulation(cfg.get("size"), cfg.get("prod"), cfg.get("cons"),
                                  cfg.get("psleep"), cfg.get("csleep"))
+                if cfg.get("speed") is not None:
+                    sim.set_speeds(speed=cfg.get("speed"))
             except ValueError as e:
                 raise ValueError(to_mongolian(str(e)))
             orig = sim.buf.listener
@@ -101,6 +105,19 @@ class Controller:
             if cfg.get("paused"):
                 sim.pause()
             sim.start()
+
+    def tune(self, cfg):
+        """Change speed / sleep limits of the running simulation."""
+        sim = self._current()
+        if not sim or sim.stop.is_set():
+            raise ValueError("Симуляци ажиллаагүй байна.")
+        try:
+            sim.set_speeds(cfg.get("psleep"), cfg.get("csleep"), cfg.get("speed"))
+        except ValueError as e:
+            raise ValueError(to_mongolian(str(e)))
+        with self.lock:
+            if self.config is not None:
+                self.config.update(psleep=sim.prod_sleep, csleep=sim.cons_sleep)
 
     def _current(self):
         with self.lock:
@@ -168,11 +185,25 @@ def make_handler(ctl):
             self._send(code, json.dumps(obj, ensure_ascii=False).encode("utf-8"),
                        "application/json; charset=utf-8")
 
+        def _static(self, path):
+            """Serve tour.json and the generated voice files (ui/voice/...) only."""
+            types = {".json": "application/json; charset=utf-8", ".mp3": "audio/mpeg"}
+            full = os.path.realpath(os.path.join(UI_DIR, path.lstrip("/")))
+            ext = os.path.splitext(full)[1]
+            if path == "/voice/manifest.json" and not os.path.isfile(full):
+                return self._json(200, {})          # no voice generated yet
+            if not full.startswith(UI_DIR + os.sep) or ext not in types or not os.path.isfile(full):
+                return self._json(404, {"error": "not found"})
+            with open(full, "rb") as f:
+                self._send(200, f.read(), types[ext])
+
         def do_GET(self):
             path, _, query = self.path.partition("?")
             if path in ("/", "/index.html"):
                 with open(INDEX, "rb") as f:
                     self._send(200, f.read(), "text/html; charset=utf-8")
+            elif path == "/tour.json" or path.startswith("/voice/"):
+                self._static(path)
             elif path == "/api/state":
                 try:
                     since = int(parse_qs(query).get("since", ["0"])[0])
@@ -190,6 +221,8 @@ def make_handler(ctl):
                 data = json.loads(self.rfile.read(n) or b"{}") if n else {}
                 if self.path == "/api/start":
                     ctl.start(data if isinstance(data, dict) else {})
+                elif self.path == "/api/tune":
+                    ctl.tune(data if isinstance(data, dict) else {})
                 elif self.path in actions:
                     actions[self.path]()
                 else:

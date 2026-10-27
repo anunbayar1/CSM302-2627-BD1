@@ -38,7 +38,7 @@ small{color:var(--muted);font-weight:500}
 /* ---------- header ---------- */
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
 .brand{display:flex;align-items:center;gap:12px}
-.brand svg{width:40px;height:40px;flex:none}
+.brandic{display:grid}.brandic svg{width:40px;height:40px;flex:none}
 .brand h1{font-size:19px;margin:0;letter-spacing:-.01em}
 .brand p{margin:0;font-size:12.5px;color:var(--muted)}
 .top-right{display:flex;align-items:center;gap:10px}
@@ -150,7 +150,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .ptrs.in .ptr span{background:var(--green-soft);color:var(--green)}
 .ptr.on span{visibility:visible}
 .mailbox{background:var(--box);border-radius:30px 30px 14px 14px;padding:30px 18px 12px;position:relative;box-shadow:inset 0 -6px 0 var(--box-dark)}
-.mailbox::before{content:"ШУУДАН";position:absolute;top:8px;left:0;right:0;text-align:center;color:#fff;font-size:11px;font-weight:800;letter-spacing:.3em;opacity:.9}
+.boxlabel{position:absolute;top:8px;left:0;right:0;text-align:center;color:#fff;font-size:11px;font-weight:800;letter-spacing:.3em;opacity:.9}
 .slots{display:grid;gap:6px}
 .slot{height:68px;border-radius:9px;background:var(--slot);border:1px solid var(--slot-line);display:grid;place-items:center;position:relative;transition:box-shadow .2s}
 .slot.last{box-shadow:0 0 0 3px #ffb020}
@@ -210,6 +210,17 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .result.ok{display:block;background:var(--green-soft);color:var(--green)}
 .result.bad{display:block;background:var(--red-soft);color:var(--red)}
 
+/* speed */
+.live{font-size:9.5px;font-weight:800;letter-spacing:.06em;color:var(--red);background:var(--red-soft);padding:1px 5px;border-radius:5px;vertical-align:2px}
+.speedbox{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.speedval{font-size:20px;color:var(--accent);font-variant-numeric:tabular-nums}
+.ticks{display:flex;justify-content:space-between;font:600 11.5px ui-monospace,monospace;color:var(--muted);padding:0 2px;margin-top:2px}
+.ticks span.on{color:var(--accent)}
+.ticks span{cursor:pointer}
+.speedends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px}
+.speedtag{font:700 13px ui-monospace,monospace;color:var(--accent);background:var(--accent-soft);padding:5px 9px;border-radius:999px}
+.speedtag.blink{animation:blink .6s}
+@keyframes blink{0%{box-shadow:0 0 0 0 var(--accent)}100%{box-shadow:0 0 0 10px transparent}}
 /* waiting queues */
 .queue{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px;color:var(--muted);min-height:34px}
 .queue .ql{margin-right:2px}
@@ -259,6 +270,32 @@ th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute
 td code{font-size:12px}
 .dlg-foot{display:flex;justify-content:flex-end;margin-top:18px}
 
+.top .btn,.chip{white-space:nowrap}
+.top-right{flex:none}
+@media (max-width:1180px){.brand p{display:none}}
+@media (max-width:1000px){#helpBtn .hl{display:none}}
+.btn.tour{background:linear-gradient(135deg,#4f46e5,#9333ea);color:#fff;border:0}
+.btn.tour:hover:not(:disabled){filter:brightness(1.1);background:linear-gradient(135deg,#4f46e5,#9333ea)}
+/* guided voice tour */
+#spot{position:fixed;z-index:35;border-radius:18px;pointer-events:none;box-shadow:0 0 0 9999px rgba(8,10,24,.55),0 0 0 3px #a5b4fc;transition:all .45s cubic-bezier(.4,0,.2,1);display:none}
+#tourbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:40;width:min(860px,calc(100vw - 32px));background:var(--card);color:var(--ink);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.35);padding:16px 18px;display:none}
+#tourbar.show{display:block;animation:fadein .3s}
+.tb-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tb-top .wave{display:flex;gap:3px;align-items:flex-end;height:18px}
+.tb-top .wave i{width:4px;background:var(--accent);border-radius:2px;height:5px}
+#tourbar.speaking .wave i{animation:wave .9s infinite ease-in-out}
+#tourbar.speaking .wave i:nth-child(2){animation-delay:.15s}
+#tourbar.speaking .wave i:nth-child(3){animation-delay:.3s}
+#tourbar.speaking .wave i:nth-child(4){animation-delay:.45s}
+@keyframes wave{50%{height:18px}}
+.tb-step{font:700 12px ui-monospace,monospace;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:999px}
+.tb-src{font-size:12px;color:var(--muted);margin-left:auto}
+#tbText{font-size:18px;line-height:1.5;font-weight:500;min-height:54px}
+.tb-prog{height:4px;background:var(--line);border-radius:2px;margin:12px 0 10px;overflow:hidden}
+.tb-prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.tb-ctl{display:flex;gap:8px;justify-content:space-between;align-items:center}
+.tb-ctl .grp{display:flex;gap:8px}
+.tb-ctl .btn{padding:7px 12px;font-size:14px}
 @media (max-width:1180px){
   .layout{grid-template-columns:1fr}
   .metrics{grid-template-columns:repeat(3,1fr)}
@@ -281,18 +318,23 @@ td code{font-size:12px}
 
 <header class="top">
   <div class="brand">
-    <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="8" width="32" height="24" rx="8" fill="var(--box)"/><rect x="9" y="15" width="22" height="11" rx="2" fill="var(--paper)" stroke="var(--paper-edge)"/><path d="M9.5 15.5 L20 22 L30.5 15.5" fill="none" stroke="var(--paper-edge)" stroke-width="1.5"/><rect x="17" y="32" width="6" height="5" fill="var(--box-dark)"/></svg>
+    <span id="brandIc" class="brandic"></span>
     <div>
-      <h1>Шуудангийн хайрцаг</h1>
+      <h1 data-t="title">Шуудангийн хайрцаг</h1>
       <p>Producer–Consumer · bounded buffer · F.CSM302 БД1</p>
     </div>
   </div>
   <div class="top-right">
     <span id="chip" class="chip">Хаалттай</span>
     <span id="clock" class="clock">0.0 с</span>
+    <span id="speedTag" class="speedtag" title="Хурд">1×</span>
+    <button id="tourBtn" class="btn tour">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+      Дуут тайлбар
+    </button>
     <button id="helpBtn" class="btn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.7"/><circle cx="12" cy="17.3" r=".6" fill="currentColor"/></svg>
-      Яаж ажилладаг вэ?
+      <span class="hl">Яаж ажилладаг вэ?</span>
     </button>
     <button id="themeBtn" class="btn icon-btn" title="Өнгө солих (цайвар/бараан)" aria-label="Өнгө солих">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor"/></svg>
@@ -302,7 +344,7 @@ td code{font-size:12px}
 
 <main class="layout">
   <aside class="panel">
-    <section class="card">
+    <section class="card" id="setCard">
       <h2>Тохиргоо</h2>
       <div id="fields"></div>
       <div style="font-size:13px;font-weight:600;margin:4px 0 6px">Бэлэн жишээ</div>
@@ -313,7 +355,7 @@ td code{font-size:12px}
       </label>
     </section>
 
-    <section class="card">
+    <section class="card" id="ctrlCard">
       <h2>Удирдлага</h2>
       <div class="controls">
         <button id="bStart" class="btn primary wide"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>Эхлүүлэх</button>
@@ -322,18 +364,24 @@ td code{font-size:12px}
         <button id="bStop" class="btn danger"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Зогсоох</button>
         <button id="bReset" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>Шинэчлэх</button>
       </div>
-      <div class="shortcuts"><span><kbd>Space</kbd> зогсоох/үргэлжлүүлэх</span><span><kbd>N</kbd> нэг алхам</span></div>
+      <div class="speedbox">
+        <div class="field-top"><label for="speed">Хурд <span class="live">LIVE</span><small>ажиллаж байхад шууд өөрчлөгдөнө</small></label><b id="speedVal" class="speedval">1×</b></div>
+        <input id="speed" type="range" min="0" max="4" step="1" value="2" aria-label="Хурд">
+        <div class="ticks"><span>¼×</span><span>½×</span><span class="on">1×</span><span>2×</span><span>4×</span></div>
+        <div class="speedends"><span>удаан</span><span>хурдан</span></div>
+      </div>
+      <div class="shortcuts"><span><kbd>Space</kbd> зогсоох/үргэлжлүүлэх</span><span><kbd>N</kbd> нэг алхам</span><span><kbd>+</kbd><kbd>−</kbd> хурд</span></div>
     </section>
 
     <section class="card">
       <h2>Өнгөний тайлбар</h2>
       <div class="legend">
         <div><span class="sw" style="background:var(--gray-soft)"></span>Амарч байна (sleep)</div>
-        <div><span class="sw" style="background:var(--green-soft)"></span>Захидал бичиж байна (produce)</div>
+        <div><span class="sw" style="background:var(--green-soft)"></span><span data-t="make"></span> (produce)</div>
         <div><span class="sw" style="background:var(--amber-soft)"></span>Хүлээж байна (wait)</div>
-        <div><span class="sw" style="background:var(--blue-soft)"></span>Захидал уншиж байна (consume)</div>
+        <div><span class="sw" style="background:var(--blue-soft)"></span><span data-t="use"></span> (consume)</div>
         <div><span class="sw" style="background:var(--violet-soft)"></span>Түр зогссон (pause)</div>
-        <div><span class="sw" style="background:var(--slot);box-shadow:0 0 0 2px #ffb020"></span>Сүүлд өөрчлөгдсөн нүд</div>
+        <div><span class="sw" style="background:var(--slot);box-shadow:0 0 0 2px #ffb020"></span>Сүүлд өөрчлөгдсөн <span data-t="slot"></span></div>
       </div>
     </section>
   </aside>
@@ -349,46 +397,47 @@ td code{font-size:12px}
 
     <div class="card scene">
       <div class="col prod">
-        <h3><span class="dot" style="background:var(--green)"></span>Илгээгчид <small>producer</small></h3>
+        <h3><span class="dot" style="background:var(--green)"></span><span data-t="prods"></span> <small>producer</small></h3>
         <div id="prods" class="people"></div>
       </div>
       <div class="boxwrap">
-        <h3>Шуудангийн хайрцаг <small id="boxSub">buffer</small></h3>
+        <h3><span data-t="box"></span> <small id="boxSub">buffer</small></h3>
         <div id="outRow" class="ptrs out"></div>
         <div class="mailbox">
+          <div class="boxlabel" data-t="boxLabel"></div>
           <div id="slots" class="slots"></div>
           <div id="idxRow" class="idx"></div>
         </div>
         <div class="post"></div>
         <div id="inRow" class="ptrs in"></div>
-        <div class="wrapnote">Сүүлийн нүдний дараа дахиад эхний нүднээс эхэлнэ (дугуй дараалал)</div>
+        <div class="wrapnote" data-t="wrapNote"></div>
       </div>
       <div class="col cons">
-        <h3><small>consumer</small> Хүлээн авагчид <span class="dot" style="background:var(--blue)"></span></h3>
+        <h3><small>consumer</small> <span data-t="conss"></span> <span class="dot" style="background:var(--blue)"></span></h3>
         <div id="cons" class="people"></div>
       </div>
       <div id="idle" class="idle">
         <div>
-          <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="8" width="32" height="24" rx="8" fill="var(--box)"/><rect x="9" y="15" width="22" height="11" rx="2" fill="var(--paper)" stroke="var(--paper-edge)"/><path d="M9.5 15.5 L20 22 L30.5 15.5" fill="none" stroke="var(--paper-edge)" stroke-width="1.5"/><rect x="17" y="32" width="6" height="5" fill="var(--box-dark)"/></svg>
-          <h4>Шуудан хаалттай байна</h4>
-          <p>Тохиргоо эсвэл бэлэн жишээ сонгоод «Эхлүүлэх» дарна уу.</p>
+          <span id="idleIc" class="brandic" style="justify-content:center"></span>
+          <h4 data-t="closed"></h4>
+          <p>Тохиргоо эсвэл бэлэн жишээ сонгоод «Эхлүүлэх» дарна уу. Эсвэл дээрх «Дуут тайлбар»-ыг сонсоорой.</p>
         </div>
       </div>
     </div>
 
     <div class="metrics">
       <div id="mEmpty" class="card metric">
-        <div class="mhead"><span class="mtitle">Сул нүд</span><code>empty</code></div>
+        <div class="mhead"><span class="mtitle">Сул <span data-t="slot"></span></span><code>empty</code></div>
         <div class="mval" id="vEmpty">–</div>
         <div class="dots" id="dEmpty"></div>
-        <div class="mrule">0 болбол илгээгч хүлээнэ</div>
+        <div class="mrule">0 болбол <span data-t="prodL"></span> хүлээнэ</div>
         <div class="queue" id="qEmpty"></div>
       </div>
       <div id="mFull" class="card metric">
-        <div class="mhead"><span class="mtitle">Захидал</span><code>full</code></div>
+        <div class="mhead"><span class="mtitle" data-t="itemC"></span><code>full</code></div>
         <div class="mval" id="vFull">–</div>
         <div class="dots" id="dFull"></div>
-        <div class="mrule">0 болбол хүлээн авагч хүлээнэ</div>
+        <div class="mrule">0 болбол <span data-t="consL"></span> хүлээнэ</div>
         <div class="queue" id="qFull"></div>
       </div>
       <div id="mMutex" class="card metric" style="color:var(--green)">
@@ -397,11 +446,11 @@ td code{font-size:12px}
           <svg viewBox="0 0 48 48" aria-hidden="true"><path id="shackle" d="M15 22v-6a9 9 0 0 1 18 0v6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="9" y="21" width="30" height="22" rx="6" fill="currentColor"/><circle cx="24" cy="31" r="3" fill="var(--card)"/><rect x="22.5" y="31" width="3" height="6" rx="1.5" fill="var(--card)"/></svg>
           <div class="lk-txt" id="lockTxt">Чөлөөтэй</div>
         </div>
-        <div class="mrule">Нэг удаад ганцхан хүн хайрцгийг онгойлгоно</div>
+        <div class="mrule" data-t="lockRule"></div>
         <div class="queue" id="qMutex"></div>
       </div>
       <div class="card chart">
-        <div class="mhead"><span class="mtitle">Хайрцаг дахь захидлын тоо</span><small>сүүлийн 30 с</small></div>
+        <div class="mhead"><span class="mtitle" data-t="chartTitle"></span><small>сүүлийн 30 с</small></div>
         <svg id="chart" viewBox="0 0 300 92" preserveAspectRatio="none" aria-label="График">
           <line x1="0" y1="4" x2="300" y2="4" stroke="var(--red)" stroke-dasharray="4 4" stroke-width="1" vector-effect="non-scaling-stroke" opacity=".6"/>
           <line x1="0" y1="88" x2="300" y2="88" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>
@@ -411,7 +460,7 @@ td code{font-size:12px}
         <div class="stats">
           <div>Хийсэн<b id="sProd">0</b></div>
           <div>Авсан<b id="sCons">0</b></div>
-          <div>Хайрцагт<b id="sIn">0</b></div>
+          <div><span data-t="inBox"></span><b id="sIn">0</b></div>
           <div style="margin-left:auto;text-align:right">Дүүрэн хязгаар<b id="sMax">–</b></div>
         </div>
       </div>
@@ -420,11 +469,11 @@ td code{font-size:12px}
     <div class="card codec">
       <div class="codehead">
         <h3>Код дээр яг одоо <small>thread бүр аль мөрөнд байна · сурах бичгийн Figure 7.1, 7.2</small></h3>
-        <div class="codeleg"><span class="tchip waiting">хүлээж байна</span><span class="tchip flash">хайрцагт хандаж байна</span></div>
+        <div class="codeleg"><span class="tchip waiting">хүлээж байна</span><span class="tchip flash" data-t="touching"></span></div>
       </div>
       <div class="code2">
-        <div><div class="code-title" style="color:var(--green)">producer() <small>илгээгч</small></div><ol class="code" id="codeP"></ol></div>
-        <div><div class="code-title" style="color:var(--blue)">consumer() <small>хүлээн авагч</small></div><ol class="code" id="codeC"></ol></div>
+        <div><div class="code-title" style="color:var(--green)">producer() <small data-t="prodL"></small></div><ol class="code" id="codeP"></ol></div>
+        <div><div class="code-title" style="color:var(--blue)">consumer() <small data-t="consL"></small></div><ol class="code" id="codeC"></ol></div>
       </div>
     </div>
 
@@ -438,43 +487,20 @@ td code{font-size:12px}
 
 <div id="fly" aria-hidden="true"></div>
 <div id="toast" role="status"></div>
+<div id="spot"></div>
+<div id="tourbar" role="dialog" aria-label="Дуут тайлбар">
+  <div class="tb-top"><span class="wave"><i></i><i></i><i></i><i></i></span><span class="tb-step" id="tbStep">1/16</span><span class="tb-src" id="tbSrc"></span></div>
+  <div id="tbText"></div>
+  <div class="tb-prog"><i id="tbProg"></i></div>
+  <div class="tb-ctl">
+    <div class="grp"><button class="btn" id="tbPrev">◀ Өмнөх</button><button class="btn" id="tbPlay">⏸ Түр зогсоох</button><button class="btn primary" id="tbNext">Дараах ▶</button></div>
+    <button class="btn danger" id="tbClose">✕ Дуусгах</button>
+  </div>
+</div>
 
 <dialog id="help">
   <div class="dlg">
-    <h2>Шуудангийн хайрцгийн үлгэр</h2>
-    <p class="lead">Гудамжинд цөөхөн нүдтэй, жижигхэн шуудангийн хайрцаг байдаг. Илгээгчид захидал бичээд хайрцагт хийдэг, хүлээн авагчид ирж захидлаа аваад уншдаг. Хүн бүр өөрийн хурдаар ажилладаг тул хоорондоо мөргөлдөхгүйн тулд гурван дүрэм сахидаг.</p>
-    <div class="story">
-      <div class="card">
-        <svg viewBox="0 0 200 84"><rect x="60" y="10" width="110" height="56" rx="12" fill="var(--box)"/><g fill="var(--paper)" stroke="var(--paper-edge)"><rect x="70" y="22" width="20" height="34" rx="3"/><rect x="95" y="22" width="20" height="34" rx="3"/><rect x="120" y="22" width="20" height="34" rx="3"/><rect x="145" y="22" width="20" height="34" rx="3"/></g><circle cx="26" cy="40" r="14" fill="var(--skin)"/><rect x="12" y="22" width="28" height="9" rx="3" fill="var(--box)"/><text x="26" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="var(--amber)">хүлээнэ</text></svg>
-        <h4>1. Дүүрсэн бол хүлээ</h4>
-        <p>Бүх нүд захидалтай бол илгээгч захидлаа барьсаар хүлээнэ. Газар хаяж болохгүй! Энэ нь <code>empty = 0</code> үед болдог.</p>
-      </div>
-      <div class="card">
-        <svg viewBox="0 0 200 84"><rect x="30" y="10" width="110" height="56" rx="12" fill="var(--box)"/><g fill="var(--slot)" stroke="var(--slot-line)"><rect x="40" y="22" width="20" height="34" rx="3"/><rect x="65" y="22" width="20" height="34" rx="3"/><rect x="90" y="22" width="20" height="34" rx="3"/><rect x="115" y="22" width="20" height="34" rx="3"/></g><circle cx="172" cy="40" r="14" fill="var(--skin)"/><path d="M158 36a14 14 0 0 1 28 0z" fill="#0ea5e9"/><text x="172" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="var(--amber)">хүлээнэ</text></svg>
-        <h4>2. Хоосон бол хүлээ</h4>
-        <p>Нэг ч захидал байхгүй бол хүлээн авагч захидал ирэхийг хүлээнэ. Байхгүй захидал авч болохгүй! Энэ нь <code>full = 0</code> үед болдог.</p>
-      </div>
-      <div class="card">
-        <svg viewBox="0 0 200 84"><g transform="translate(76 8)"><path d="M10 26v-8a14 14 0 0 1 28 0v8" fill="none" stroke="var(--red)" stroke-width="6" stroke-linecap="round"/><rect x="2" y="24" width="44" height="34" rx="8" fill="var(--red)"/><circle cx="24" cy="39" r="4" fill="var(--card)"/></g><circle cx="38" cy="44" r="13" fill="var(--skin)"/><circle cx="162" cy="44" r="13" fill="var(--skin)"/><text x="100" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="var(--red)">ганцхан түлхүүр</text></svg>
-        <h4>3. Ганцхан түлхүүр</h4>
-        <p>Хайрцгийн түлхүүр ганцхан. Түлхүүртэй хүн л хайрцгийг онгойлгоно. Хоёр хүн зэрэг гараа хийвэл захидал холилдоно. Үүнийг <code>mutex</code> хамгаалдаг.</p>
-      </div>
-    </div>
-    <p style="margin:0 0 16px;font-size:14px">Хамгийн түрүүнд хийсэн захидлыг хамгийн түрүүнд авна (<b>FIFO</b>). Сүүлийн нүдэнд хүрвэл дахиад эхний нүднээс эхэлнэ (<b>дугуй дараалал</b>, <code>(i + 1) % size</code>). Эдгээр дүрмийг сахивал захидал хэзээ ч алга болохгүй, хоёр удаа уншигдахгүй.</p>
-    <table>
-      <thead><tr><th>Үлгэрт</th><th>Үйлдлийн системд</th><th>Манай кодонд</th></tr></thead>
-      <tbody>
-        <tr><td>Илгээгч</td><td>Producer thread</td><td><code>Worker(kind="producer")</code></td></tr>
-        <tr><td>Хүлээн авагч</td><td>Consumer thread</td><td><code>Worker(kind="consumer")</code></td></tr>
-        <tr><td>Шуудангийн хайрцаг</td><td>Bounded buffer</td><td><code>BoundedBuffer.slots[]</code></td></tr>
-        <tr><td>Дугаартай захидал</td><td>Item</td><td><code>random.randint(1, 99)</code></td></tr>
-        <tr><td>Сул нүдний тоо</td><td>empty semaphore</td><td><code>Semaphore(size)</code></td></tr>
-        <tr><td>Хайрцаг дахь захидлын тоо</td><td>full semaphore</td><td><code>Semaphore(0)</code></td></tr>
-        <tr><td>Хайрцгийн түлхүүр</td><td>mutex lock</td><td><code>threading.Lock()</code></td></tr>
-        <tr><td>Захидал хийх / авах</td><td>insert_item / remove_item</td><td>0 эсвэл -1 буцаана</td></tr>
-        <tr><td>Хүлээх</td><td>Semaphore дээр блоклогдох</td><td><code>sem.acquire()</code></td></tr>
-      </tbody>
-    </table>
+    <div id="helpBody"></div>
     <div class="dlg-foot"><button class="btn primary" id="helpClose">Ойлголоо</button></div>
   </div>
 </dialog>
@@ -482,61 +508,89 @@ td code{font-size:12px}
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
+/* ---------- examples (themes): every word that depends on the story lives here ---------- */
+const THEMES = {
+  mail: {
+    name: "Шуудан", title: "Шуудангийн хайрцаг", boxLabel: "ШУУДАН",
+    prod: "Илгээгч", prods: "Илгээгчид", prodL: "илгээгч", prodGen: "Илгээгчийн",
+    cons: "Хүлээн авагч", conss: "Хүлээн авагчид", consL: "хүлээн авагч", consGen: "Хүлээн авагчийн",
+    box: "Шуудангийн хайрцаг", boxC: "Хайрцаг", boxL: "хайрцаг", boxGen: "Хайрцгийн", boxDat: "хайрцагт", boxIn: "хайрцаг дахь",
+    slot: "нүд", slotDat: "нүдэнд", slotAbl: "нүднээс", slotGen: "нүдний", slotWith: "нүдтэй",
+    item: "захидал", itemOwn: "захидлаа", itemC: "Захидал", itemAcc: "захидлыг", itemGen: "захидлын",
+    make: "Захидал бичиж байна", use: "Захидал уншиж байна", codeMake: "захидал бичнэ", codeUse: "захидлаа уншина",
+    put: "хийлээ", putLog: "хийв", putInf: "хийх", codePut: "хийнэ", putPast: "хийсэн",
+    lockRule: "Нэг удаад ганцхан хүн хайрцгийг онгойлгоно", lockBusy: "Нэг хүн хайрцгийг онгойлгосон байна",
+    closed: "Шуудан хаалттай байна", closedNow: "Шуудан хаагдлаа.", started: "Шуудан ажиллаж эхэллээ!",
+    opened: "Шуудан нээгдлээ! Илгээгчид захидал хийж, хүлээн авагчид авч эхэллээ.",
+    lead: "Гудамжинд цөөхөн нүдтэй, жижигхэн шуудангийн хайрцаг байдаг. Илгээгчид захидал бичээд хайрцагт хийдэг, хүлээн авагчид ирж захидлаа аваад уншдаг. Хүн бүр өөрийн хурдаар ажилладаг тул хоорондоо мөргөлдөхгүйн тулд гурван дүрэм сахидаг.",
+    floor: "Газар хаяж болохгүй!",
+  },
+};
+let EX = "mail", T = THEMES.mail;
 const FIELDS = [
-  {key:"size",   label:"Хайрцгийн нүд",    tech:"buffer size",     min:1, max:20, step:1,   def:5},
-  {key:"prod",   label:"Илгээгч",     tech:"producers",       min:1, max:10, step:1,   def:2},
-  {key:"cons",   label:"Хүлээн авагч",           tech:"consumers",       min:1, max:10, step:1,   def:2},
-  {key:"psleep", label:"Илгээгчийн амралт",  tech:"max секунд",      min:0, max:10, step:0.1, def:1.0},
-  {key:"csleep", label:"Хүлээн авагчийн амралт",  tech:"max секунд",      min:0, max:10, step:0.1, def:1.0},
+  {key:"size",   label:() => `${T.boxGen} ${T.slot}`, tech:"buffer size", min:1, max:20, step:1,   def:5},
+  {key:"prod",   label:() => T.prod,                  tech:"producers",   min:1, max:10, step:1,   def:2},
+  {key:"cons",   label:() => T.cons,                  tech:"consumers",   min:1, max:10, step:1,   def:2},
+  {key:"psleep", live:true, label:() => `${T.prodGen} амралт`, tech:"max секунд", min:0, max:10, step:0.1, def:1.0},
+  {key:"csleep", live:true, label:() => `${T.consGen} амралт`, tech:"max секунд", min:0, max:10, step:0.1, def:1.0},
 ];
 const PRESETS = [
-  {name:"Тэнцүү",                 v:{size:5,  prod:2, cons:2, psleep:1.0, csleep:1.0}},
-  {name:"Хайрцаг дүүрнэ",         v:{size:5,  prod:4, cons:1, psleep:0.3, csleep:2.0}},
-  {name:"Хайрцаг хоосорно",       v:{size:5,  prod:1, cons:4, psleep:2.0, csleep:0.3}},
-  {name:"1 нүдтэй",               v:{size:1,  prod:3, cons:3, psleep:0.5, csleep:0.5}},
-  {name:"Олон хүн",               v:{size:12, prod:6, cons:6, psleep:0.8, csleep:0.8}},
+  {name:() => "Тэнцүү",                v:{size:5,  prod:2, cons:2, psleep:1.0, csleep:1.0}},
+  {name:() => `${T.boxC} дүүрнэ`,      v:{size:5,  prod:4, cons:1, psleep:0.3, csleep:2.0}},
+  {name:() => `${T.boxC} хоосорно`,    v:{size:5,  prod:1, cons:4, psleep:2.0, csleep:0.3}},
+  {name:() => `1 ${T.slotWith}`,       v:{size:1,  prod:3, cons:3, psleep:0.5, csleep:0.5}},
+  {name:() => "Олон хүн",              v:{size:12, prod:6, cons:6, psleep:0.8, csleep:0.8}},
 ];
 const ST = {
-  idle:      ["Бэлэн",                   "Бэлэн"],
-  sleeping:  ["Амарч байна",             "Амарч байна"],
-  producing: ["Захидал бичиж байна",    ""],
-  waiting:   ["Хүлээж байна",            "Хүлээж байна"],
-  consuming: ["",                        "Захидал уншиж байна"],
-  paused:    ["Түр зогссон",             "Түр зогссон"],
-  stopped:   ["Зогссон",                 "Зогссон"],
+  idle:      () => ["Бэлэн", "Бэлэн"],
+  sleeping:  () => ["Амарч байна", "Амарч байна"],
+  producing: () => [T.make, ""],
+  waiting:   () => ["Хүлээж байна", "Хүлээж байна"],
+  consuming: () => ["", T.use],
+  paused:    () => ["Түр зогссон", "Түр зогссон"],
+  stopped:   () => ["Зогссон", "Зогссон"],
 };
 const FLY_MS = 560, HIST_S = 30;
-const CODE = {
+const CODE = () => ({
   P: [["while (true) {", ""],
       ["  sleep(random)", "амарна", "sleep"],
-      ["  item = rand()", "захидал бичнэ", "make"],
-      ["  wait(empty)", "сул нүд байхгүй бол энд хүлээнэ", "wsem"],
+      ["  item = rand()", T.codeMake, "make"],
+      ["  wait(empty)", `сул ${T.slot} байхгүй бол энд хүлээнэ`, "wsem"],
       ["  lock(mutex)", "түлхүүр чөлөөлөгдөхийг хүлээнэ", "lock"],
-      ["  buffer[in] = item", "захидлыг нүдэнд хийнэ", "c1"],
-      ["  in = (in + 1) % N", "дараагийн нүд (дугуй)", "c2"],
+      ["  buffer[in] = item", `${T.itemAcc} ${T.slotDat} ${T.codePut}`, "c1"],
+      ["  in = (in + 1) % N", `дараагийн ${T.slot} (дугуй)`, "c2"],
       ["  unlock(mutex)", "түлхүүрээ буцаана", "c3"],
-      ["  signal(full)", "захидлын тоо +1", "c4"],
+      ["  signal(full)", `${T.itemGen} тоо +1`, "c4"],
       ["}", ""]],
   C: [["while (true) {", ""],
       ["  sleep(random)", "амарна", "sleep"],
-      ["  wait(full)", "захидал байхгүй бол энд хүлээнэ", "wsem"],
+      ["  wait(full)", `${T.item} байхгүй бол энд хүлээнэ`, "wsem"],
       ["  lock(mutex)", "түлхүүр чөлөөлөгдөхийг хүлээнэ", "lock"],
-      ["  item = buffer[out]", "захидлыг нүднээс авна", "c1"],
-      ["  out = (out + 1) % N", "дараагийн нүд (дугуй)", "c2"],
+      ["  item = buffer[out]", `${T.itemAcc} ${T.slotAbl} авна`, "c1"],
+      ["  out = (out + 1) % N", `дараагийн ${T.slot} (дугуй)`, "c2"],
       ["  unlock(mutex)", "түлхүүрээ буцаана", "c3"],
-      ["  signal(empty)", "сул нүдний тоо +1", "c4"],
-      ["  consume(item)", "захидлаа уншина", "use"],
+      ["  signal(empty)", `сул ${T.slotGen} тоо +1`, "c4"],
+      ["  consume(item)", T.codeUse, "use"],
       ["}", ""]],
-};
+});
 let flashes = [];   // {side, who, until}
 
 /* ---------- small svg builders ---------- */
+function itemSVG(n, cls){ return envSVG(n, cls); }
 function envSVG(n, cls){
   const t = n === undefined || n === null ? "" :
     `<text x="30" y="36.5" text-anchor="middle" font-size="13" font-weight="800" fill="#22307c" font-family="system-ui,sans-serif">${n}</text>`;
   return `<svg class="${cls||"env"}" viewBox="0 0 60 42"><rect x="1.5" y="1.5" width="57" height="39" rx="4" fill="var(--paper)" stroke="var(--paper-edge)" stroke-width="2"/><path d="M2.5 3 L30 22 L57.5 3" fill="none" stroke="var(--paper-edge)" stroke-width="2" stroke-linejoin="round"/><rect x="45" y="6" width="9" height="10" rx="1.5" fill="var(--stamp)"/>${t}</svg>`;
 }
 function faceSVG(kind){
+  return mailFace(kind);
+}
+function eyesSVG(){
+  return `<g class="eyes-o" fill="#3b2a20"><circle cx="16.3" cy="23" r="1.5"/><circle cx="23.7" cy="23" r="1.5"/></g>
+    <g class="eyes-c" stroke="#3b2a20" stroke-width="1.4" stroke-linecap="round"><path d="M14.5 23.3h3.4M22 23.3h3.4"/></g>
+    <path d="M16.5 27.6q3.5 2.6 7 0" stroke="#3b2a20" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+}
+function mailFace(kind){
   const eyes = `<g class="eyes-o" fill="#3b2a20"><circle cx="16.3" cy="23" r="1.5"/><circle cx="23.7" cy="23" r="1.5"/></g>
     <g class="eyes-c" stroke="#3b2a20" stroke-width="1.4" stroke-linecap="round"><path d="M14.5 23.3h3.4M22 23.3h3.4"/></g>
     <path d="M16.5 27.6q3.5 2.6 7 0" stroke="#3b2a20" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
@@ -550,7 +604,7 @@ function faceSVG(kind){
 /* ---------- live code panel ---------- */
 function buildCode(){
   for (const side of ["P", "C"]){
-    $("#code" + side).innerHTML = CODE[side].map((l, i) =>
+    $("#code" + side).innerHTML = CODE()[side].map((l, i) =>
       `<li data-k="${l[2] || ""}"><span class="ln">${i + 1}</span><span class="src">${l[0]}</span>` +
       `<span class="cm">${l[1] ? "// " + l[1] : ""}</span><span class="who"></span></li>`).join("");
   }
@@ -579,7 +633,7 @@ function renderCode(s){
       const k = li.dataset.k;
       const list = (at[k] || []).map(([n, st]) => `<span class="tchip ${st}">${n}</span>`);
       const hot = k && k[0] === "c" && fl.length;
-      if (hot && k === "c1") fl.forEach(f => list.push(`<span class="tchip flash">${f.who}</span>`));
+      if (hot && k === "c1") [...new Set(fl.map(f => f.who))].forEach(w => list.push(`<span class="tchip flash">${w}</span>`));
       const html = list.join("");
       const w = li.querySelector(".who");
       if (w.innerHTML !== html) w.innerHTML = html;
@@ -611,25 +665,26 @@ function buildFields(){
   for (const f of FIELDS){
     const d = document.createElement("div");
     d.className = "field";
-    d.innerHTML = `<div class="field-top"><label for="n_${f.key}">${f.label}<small>${f.tech} · ${f.min}–${f.max}</small></label>
+    d.innerHTML = `<div class="field-top"><label for="n_${f.key}"><span class="flabel">${f.label()}</span>${f.live ? ' <span class="live">LIVE</span>' : ""}<small>${f.tech} · ${f.min}–${f.max}${f.live ? " · ажиллаж байхад өөрчилж болно" : ""}</small></label>
       <input id="n_${f.key}" class="num" type="number" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}"></div>
-      <input id="r_${f.key}" type="range" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}" aria-label="${f.label}">`;
+      <input id="r_${f.key}" type="range" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}" aria-label="${f.label()}">`;
     box.appendChild(d);
     const num = d.querySelector(".num"), rng = d.querySelector("input[type=range]");
-    rng.addEventListener("input", () => { num.value = rng.value; num.classList.remove("bad"); clearPreset(); });
+    rng.addEventListener("input", () => { num.value = rng.value; num.classList.remove("bad"); clearPreset(); if (f.live) liveTune(); });
     num.addEventListener("input", () => {
       const x = Number(num.value);
       const ok = num.value.trim() !== "" && !isNaN(x) && x >= f.min && x <= f.max && (f.step !== 1 || Number.isInteger(x));
       num.classList.toggle("bad", !ok);
       if (ok) rng.value = x;
       clearPreset();
+      if (ok && f.live) liveTune();
     });
     inputs[f.key] = {num, rng, f};
   }
   const pbox = $("#presets");
   PRESETS.forEach((p, i) => {
     const b = document.createElement("button");
-    b.className = "preset"; b.textContent = p.name; b.dataset.i = i;
+    b.className = "preset"; b.textContent = p.name(); b.dataset.i = i;
     b.onclick = () => { setValues(p.v); clearPreset(); b.classList.add("on"); };
     pbox.appendChild(b);
   });
@@ -642,13 +697,40 @@ function readValues(){
   const o = {};
   for (const k in inputs) o[k] = inputs[k].num.value;
   o.paused = $("#stepMode").checked;
+  o.speed = speed;
   return o;
 }
 function setInputsEnabled(on){
-  for (const k in inputs){ inputs[k].num.disabled = !on; inputs[k].rng.disabled = !on; }
+  for (const k in inputs){ const lock = !on && !inputs[k].f.live; inputs[k].num.disabled = lock; inputs[k].rng.disabled = lock; }
   document.querySelectorAll(".preset").forEach(b => b.disabled = !on);
   $("#stepMode").disabled = !on;
 }
+
+/* ---------- live speed ---------- */
+const SPEEDS = [0.25, 0.5, 1, 2, 4];
+let speed = 1, tuneTimer = null;
+const flyMs = () => Math.max(180, Math.min(1100, FLY_MS / speed));
+function isLive(){ return sim && !sim.stopped; }
+function liveTune(){
+  if (!isLive()) return;
+  clearTimeout(tuneTimer);
+  tuneTimer = setTimeout(async () => {
+    const body = {psleep: inputs.psleep.num.value, csleep: inputs.csleep.num.value};
+    if (await api("/api/tune", body)) flashLive();
+  }, 150);
+}
+function setSpeed(i, announce){
+  i = Math.max(0, Math.min(SPEEDS.length - 1, i));
+  speed = SPEEDS[i];
+  $("#speed").value = i;
+  $("#speedVal").textContent = fmtSpeed(speed);
+  $("#speedTag").textContent = fmtSpeed(speed);
+  document.querySelectorAll(".ticks span").forEach((t, j) => t.classList.toggle("on", j === i));
+  if (isLive()) api("/api/tune", {speed}).then(ok => { if (ok && announce) toast("Хурд: " + fmtSpeed(speed)); });
+  else if (announce) toast("Хурд: " + fmtSpeed(speed) + " (эхлүүлэхэд хэрэглэгдэнэ)");
+}
+function fmtSpeed(x){ return (x === 0.25 ? "¼" : x === 0.5 ? "½" : String(x)) + "×"; }
+function flashLive(){ const t = $("#speedTag"); t.classList.remove("blink"); void t.offsetWidth; t.classList.add("blink"); }
 
 /* ---------- api ---------- */
 async function api(path, body){
@@ -679,7 +761,7 @@ function buildLayout(s){
   const names = Object.keys(s.states);
   const P = names.filter(n => n[0] === "P"), C = names.filter(n => n[0] === "C");
   const person = (n, kind) => `<div class="person" data-n="${n}" data-st="idle"><div class="avatar">${faceSVG(kind)}</div>
-      <div class="pinfo"><div class="pname">${n}</div><div class="pstate">Бэлэн</div></div><div class="hold">${envSVG(null,"")}</div></div>`;
+      <div class="pinfo"><div class="pname">${n}</div><div class="pstate">Бэлэн</div></div><div class="hold">${itemSVG(null,"")}</div></div>`;
   $("#prods").innerHTML = P.map(n => person(n, "P")).join("");
   $("#cons").innerHTML = C.map(n => person(n, "C")).join("");
   const n = s.slots.length, cols = `repeat(${n}, minmax(0,1fr))`;
@@ -688,7 +770,7 @@ function buildLayout(s){
   $("#idxRow").innerHTML = s.slots.map((_, i) => `<div>${i}</div>`).join("");
   $("#outRow").innerHTML = s.slots.map(() => `<div class="ptr"><span>авах ▼ out</span></div>`).join("");
   $("#inRow").innerHTML = s.slots.map(() => `<div class="ptr"><span>▲ in хийх</span></div>`).join("");
-  $("#boxSub").textContent = `buffer · ${n} нүд`;
+  $("#boxSub").textContent = `buffer · ${n} ${T.slot}`;
   $("#sMax").textContent = n;
   const dots = k => Array.from({length:n}, () => "<i></i>").join("");
   $("#dEmpty").innerHTML = dots(); $("#dFull").innerHTML = dots();
@@ -702,7 +784,7 @@ function stateText(name, st, s){
     if (!prod && s.full === 0) return "Хоосон! Хүлээж байна";
     return "Түлхүүр хүлээж байна";
   }
-  const t = ST[st] || ST.idle;
+  const t = (ST[st] || ST.idle)();
   return prod ? t[0] : t[1];
 }
 
@@ -737,7 +819,7 @@ function render(d){
     const v = s.slots[i];
     const show = v !== null && !(pendingIn[i] && pendingIn[i] > now);
     const want = show ? String(v) : "";
-    if (el.dataset.v !== want){ el.dataset.v = want; el.innerHTML = show ? envSVG(v) : ""; }
+    if (el.dataset.v !== want){ el.dataset.v = want; el.innerHTML = show ? itemSVG(v) : ""; }
     el.classList.toggle("last", i === s.last);
   });
   document.querySelectorAll("#outRow .ptr").forEach((el, i) => el.classList.toggle("on", i === s.out_idx));
@@ -751,7 +833,7 @@ function render(d){
   $("#mMutex").style.color = s.mutex_locked ? "var(--red)" : "var(--green)";
   $("#shackle").setAttribute("d", s.mutex_locked ? "M15 22v-6a9 9 0 0 1 18 0v6" : "M15 22v-6a9 9 0 0 1 18 0v-3");
   $("#shackle").setAttribute("transform", s.mutex_locked ? "" : "translate(0 -4)");
-  $("#lockTxt").textContent = s.mutex_locked ? "Нэг хүн онгойлгосон байна" : "Чөлөөтэй";
+  $("#lockTxt").textContent = s.mutex_locked ? T.lockBusy : "Чөлөөтэй";
 
   // stats + chart
   $("#sProd").textContent = s.produced; $("#sCons").textContent = s.consumed;
@@ -771,11 +853,11 @@ function render(d){
   const cw = st.filter(([k, v]) => k[0] === "C" && v === "waiting").length;
   const hint = $("#hint");
   let h = "", warn = false;
-  if (s.stopped) h = "Шуудан хаагдлаа. Дахин эхлүүлэх бол «Эхлүүлэх» эсвэл «Шинэчлэх» дарна уу.";
+  if (s.stopped) h = `${T.closedNow} Дахин эхлүүлэх бол «Эхлүүлэх» эсвэл «Шинэчлэх» дарна уу.`;
   else if (s.paused) h = "Түр зогссон байна. «Нэг алхам» дарвал нэг хүн нэг алхам хийнэ, «Үргэлжлүүлэх» дарвал цааш явна.";
-  else if (s.empty === 0 && pw){ h = `Хайрцаг дүүрэн! ${pw} илгээгч сул нүд гарахыг хүлээж байна (empty = 0).`; warn = true; }
-  else if (s.full === 0 && cw){ h = `Хайрцаг хоосон! ${cw} хүлээн авагч захидал ирэхийг хүлээж байна (full = 0).`; warn = true; }
-  else h = `Хайрцагт ${s.full} захидал, ${s.empty} сул нүд байна. Бүх зүйл хэвийн урсаж байна.`;
+  else if (s.empty === 0 && pw){ h = `${T.boxC} дүүрэн! ${pw} ${T.prodL} сул ${T.slot} гарахыг хүлээж байна (empty = 0).`; warn = true; }
+  else if (s.full === 0 && cw){ h = `${T.boxC} хоосон! ${cw} ${T.consL} ${T.item} ирэхийг хүлээж байна (full = 0).`; warn = true; }
+  else h = `${T.boxDat[0].toUpperCase() + T.boxDat.slice(1)} ${s.full} ${T.item}, ${s.empty} сул ${T.slot} байна. Бүх зүйл хэвийн урсаж байна.`;
   hint.textContent = h; hint.classList.toggle("warn", warn);
 
   // result
@@ -783,10 +865,10 @@ function render(d){
     const left = s.slots.filter(x => x !== null).length, ok = s.produced - s.consumed === left;
     const r = $("#result");
     r.className = "result " + (ok ? "ok" : "bad");
-    r.textContent = ok ? `Шалгалт: ${s.produced} хийсэн − ${s.consumed} авсан = ${left} хайрцагт үлдсэн. Нэг ч захидал алга болоогүй!`
+    r.textContent = ok ? `Шалгалт: ${s.produced} хийсэн − ${s.consumed} авсан = ${left} ${T.boxDat} үлдсэн. Нэг ч ${T.item} алга болоогүй!`
                        : `Шалгалт: ${s.produced} − ${s.consumed} ≠ ${left}. Тоо таарахгүй байна!`;
     if (performance.now() - lastEventAt > 300 && !$("#narr").dataset.done){
-      $("#narr").textContent = "Шуудан хаагдлаа. Бүх thread зогслоо.";
+      $("#narr").textContent = `${T.closedNow} Бүх thread зогслоо.`;
       $("#narr").dataset.done = "1";
     }
   }
@@ -829,14 +911,14 @@ function handleEvent(e){
   const ins = e.kind === "insert";
   flashes.push({side: ins ? "P" : "C", who: e.who, until: performance.now() + 700});
   $("#narr").innerHTML = ins
-    ? `Илгээгч <b>${e.who}</b> <b>${e.item}</b> дугаартай захидлыг <b>${e.slot}-р</b> нүдэнд хийлээ.`
-    : `Хүлээн авагч <b>${e.who}</b> <b>${e.slot}-р</b> нүднээс <b>${e.item}</b> дугаартай захидлыг авлаа.`;
+    ? `${T.prod} <b>${e.who}</b> <b>${e.item}</b> дугаартай ${T.itemAcc} <b>${e.slot}-р</b> ${T.slotDat} ${T.put}.`
+    : `${T.cons} <b>${e.who}</b> <b>${e.slot}-р</b> ${T.slotAbl} <b>${e.item}</b> дугаартай ${T.itemAcc} авлаа.`;
   delete $("#narr").dataset.done;
   const log = $("#log");
   if (!logCount) log.innerHTML = "";
   const li = document.createElement("li");
   li.innerHTML = `<span class="t">${e.t.toFixed(2)} с</span><span class="tag ${ins ? "in" : "out"}">${ins ? "insert" : "remove"}</span>
-    <span>${ins ? `<b>${e.who}</b> ${e.item} дугаартай захидлыг <b>${e.slot}-р</b> нүдэнд хийв` : `<b>${e.who}</b> <b>${e.slot}-р</b> нүднээс ${e.item} дугаартай захидлыг авав`}</span>`;
+    <span>${ins ? `<b>${e.who}</b> ${e.item} дугаартай ${T.itemAcc} <b>${e.slot}-р</b> ${T.slotDat} ${T.putLog}` : `<b>${e.who}</b> <b>${e.slot}-р</b> ${T.slotAbl} ${e.item} дугаартай ${T.itemAcc} авав`}</span>`;
   log.prepend(li); logCount++;
   while (log.children.length > 200) log.lastChild.remove();
   fly(e);
@@ -850,9 +932,9 @@ function fly(e){
   if (!person || !slot) return;
   const ins = e.kind === "insert";
   const [ax, ay] = centerOf(ins ? person : slot), [bx, by] = centerOf(ins ? slot : person);
-  if (ins) pendingIn[e.slot] = performance.now() + FLY_MS;
+  if (ins) pendingIn[e.slot] = performance.now() + flyMs();
   const holder = document.createElement("div");
-  holder.innerHTML = envSVG(e.item, "");
+  holder.innerHTML = itemSVG(e.item, "");
   const el = holder.firstChild;
   $("#fly").appendChild(el);
   const w = 44, h = 31, mx = (ax + bx) / 2, my = Math.min(ay, by) - 46;
@@ -861,9 +943,200 @@ function fly(e){
     {transform: at(ax, ay, .7), opacity: .4},
     {transform: at(mx, my, 1.1), opacity: 1, offset: .5},
     {transform: at(bx, by, .9), opacity: 1}
-  ], {duration: FLY_MS, easing: "cubic-bezier(.4,.0,.2,1)"});
+  ], {duration: flyMs(), easing: "cubic-bezier(.4,.0,.2,1)"});
   anim.onfinish = () => { el.remove(); if (sim) render({sim}); };
 }
+
+/* ---------- switching the example ---------- */
+const HELP_SVG = [
+  `<svg viewBox="0 0 200 84"><rect x="60" y="10" width="110" height="56" rx="12" fill="var(--box)"/><g fill="var(--paper)" stroke="var(--paper-edge)"><rect x="70" y="22" width="20" height="34" rx="3"/><rect x="95" y="22" width="20" height="34" rx="3"/><rect x="120" y="22" width="20" height="34" rx="3"/><rect x="145" y="22" width="20" height="34" rx="3"/></g><circle cx="26" cy="40" r="14" fill="var(--skin)"/><text x="26" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="var(--amber)">хүлээнэ</text></svg>`,
+  `<svg viewBox="0 0 200 84"><rect x="30" y="10" width="110" height="56" rx="12" fill="var(--box)"/><g fill="var(--slot)" stroke="var(--slot-line)"><rect x="40" y="22" width="20" height="34" rx="3"/><rect x="65" y="22" width="20" height="34" rx="3"/><rect x="90" y="22" width="20" height="34" rx="3"/><rect x="115" y="22" width="20" height="34" rx="3"/></g><circle cx="172" cy="40" r="14" fill="var(--skin)"/><text x="172" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="var(--amber)">хүлээнэ</text></svg>`,
+  `<svg viewBox="0 0 200 84"><g transform="translate(76 8)"><path d="M10 26v-8a14 14 0 0 1 28 0v8" fill="none" stroke="var(--red)" stroke-width="6" stroke-linecap="round"/><rect x="2" y="24" width="44" height="34" rx="8" fill="var(--red)"/><circle cx="24" cy="39" r="4" fill="var(--card)"/></g><circle cx="38" cy="44" r="13" fill="var(--skin)"/><circle cx="162" cy="44" r="13" fill="var(--skin)"/><text x="100" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="var(--red)">ганцхан түлхүүр</text></svg>`,
+];
+function helpHTML(){
+  return `<h2>${T.title}: энгийн тайлбар</h2>
+    <p class="lead">${T.lead}</p>
+    <div class="story">
+      <div class="card">${HELP_SVG[0]}<h4>1. Дүүрсэн бол хүлээ</h4>
+        <p>Бүх ${T.slot} дүүрэн бол ${T.prodL} ${T.itemOwn} барьсаар хүлээнэ. ${T.floor} Энэ нь <code>empty = 0</code> үед болдог.</p></div>
+      <div class="card">${HELP_SVG[1]}<h4>2. Хоосон бол хүлээ</h4>
+        <p>Нэг ч ${T.item} байхгүй бол ${T.consL} ${T.item} ирэхийг хүлээнэ. Байхгүй ${T.itemAcc} авч болохгүй! Энэ нь <code>full = 0</code> үед болдог.</p></div>
+      <div class="card">${HELP_SVG[2]}<h4>3. Ганцхан түлхүүр</h4>
+        <p>${T.lockRule}. Хоёр хүн зэрэг гар хүрвэл ${T.item} холилдоно. Үүнийг <code>mutex</code> хамгаалдаг.</p></div>
+    </div>
+    <p style="margin:0 0 16px;font-size:14px">Хамгийн түрүүнд ${T.putPast} ${T.itemAcc} хамгийн түрүүнд авна (<b>FIFO</b>). Сүүлийн ${T.slotDat} хүрвэл дахиад эхний ${T.slotAbl} эхэлнэ (<b>дугуй дараалал</b>, <code>(i + 1) % size</code>). Эдгээр дүрмийг сахивал ${T.item} хэзээ ч алга болохгүй, давхардахгүй.</p>
+    <table>
+      <thead><tr><th>Жишээнд</th><th>Үйлдлийн системд</th><th>Манай кодонд</th></tr></thead>
+      <tbody>
+        <tr><td>${T.prod}</td><td>Producer thread</td><td><code>Worker(kind="producer")</code></td></tr>
+        <tr><td>${T.cons}</td><td>Consumer thread</td><td><code>Worker(kind="consumer")</code></td></tr>
+        <tr><td>${T.box}</td><td>Bounded buffer</td><td><code>BoundedBuffer.slots[]</code></td></tr>
+        <tr><td>Дугаартай ${T.item}</td><td>Item</td><td><code>random.randint(1, 99)</code></td></tr>
+        <tr><td>Сул ${T.slotGen} тоо</td><td>empty semaphore</td><td><code>Semaphore(size)</code></td></tr>
+        <tr><td>${T.boxIn[0].toUpperCase() + T.boxIn.slice(1)} ${T.itemGen} тоо</td><td>full semaphore</td><td><code>Semaphore(0)</code></td></tr>
+        <tr><td>Түлхүүр</td><td>mutex lock</td><td><code>threading.Lock()</code></td></tr>
+        <tr><td>${T.itemC} ${T.putInf} / авах</td><td>insert_item / remove_item</td><td>0 эсвэл -1 буцаана</td></tr>
+        <tr><td>Хүлээх</td><td>Semaphore дээр блоклогдох</td><td><code>sem.acquire()</code></td></tr>
+        <tr><td>Амралт</td><td>Санамсаргүй sleep</td><td><code>random.uniform(0, max)</code></td></tr>
+      </tbody>
+    </table>`;
+}
+const BRAND = {
+  mail: `<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="8" width="32" height="24" rx="8" fill="#3347b0"/><rect x="9" y="15" width="22" height="11" rx="2" fill="#fffdf6" stroke="#c7a462"/><path d="M9.5 15.5 L20 22 L30.5 15.5" fill="none" stroke="#c7a462" stroke-width="1.5"/><rect x="17" y="32" width="6" height="5" fill="#22307c"/></svg>`,
+};
+function applyEx(ex){
+  EX = "mail"; T = THEMES.mail;
+  document.body.dataset.ex = EX;
+  document.querySelectorAll("[data-t]").forEach(el => { el.textContent = T[el.dataset.t] !== undefined ? T[el.dataset.t] : (EXTRA[el.dataset.t] || (() => ""))(); });
+  $("#brandIc").innerHTML = BRAND[EX]; $("#idleIc").innerHTML = BRAND[EX];
+  for (const k in inputs){ inputs[k].num.closest(".field").querySelector(".flabel").textContent = inputs[k].f.label(); inputs[k].rng.setAttribute("aria-label", inputs[k].f.label()); }
+  document.querySelectorAll(".preset").forEach((b, i) => b.textContent = PRESETS[i].name());
+  $("#helpBody").innerHTML = helpHTML();
+  document.title = `${T.title} · Producer–Consumer`;
+  buildCode();
+  layoutKey = "";                       // rebuild people + slots with the new pictures
+  if (sim) render({sim});
+}
+const EXTRA = {
+  wrapNote: () => `Сүүлийн ${T.slotGen} дараа дахиад эхний ${T.slotAbl} эхэлнэ (дугуй дараалал)`,
+  chartTitle: () => `${T.boxIn[0].toUpperCase() + T.boxIn.slice(1)} ${T.itemGen} тоо`,
+  inBox: () => T.boxDat[0].toUpperCase() + T.boxDat.slice(1),
+  touching: () => `${T.boxDat} хандаж байна`,
+};
+
+/* ---------- guided voice tour ---------- */
+const tour = {on:false, i:0, steps:[], token:0, paused:false, audio:null, manifest:null, mnVoice:null, src:""};
+async function loadTourData(){
+  if (!tour.data){
+    try { tour.data = await (await fetch("/tour.json", {cache:"no-store"})).json(); } catch(e){ tour.data = null; }
+    try { const r = await fetch("/voice/manifest.json", {cache:"no-store"}); tour.manifest = r.ok ? await r.json() : null; } catch(e){ tour.manifest = null; }
+  }
+  return tour.data;
+}
+function pickMnVoice(){
+  if (!("speechSynthesis" in window)) return null;
+  const vs = speechSynthesis.getVoices();
+  return vs.find(v => /^mn/i.test(v.lang)) || vs.find(v => /mongol/i.test(v.name)) || null;
+}
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => { tour.mnVoice = pickMnVoice(); };
+async function startTour(){
+  const data = await loadTourData();
+  if (!data){ toast("tour.json уншиж чадсангүй.", true); return; }
+  tour.steps = data.themes[EX] || [];
+  tour.mnVoice = pickMnVoice();
+  tour.on = true; tour.i = 0; tour.paused = false;
+  if (dlg.open) dlg.close();
+  $("#tourbar").classList.add("show"); $("#spot").style.display = "block";
+  playStep();
+}
+function stopTour(){
+  tour.on = false; tour.token++;
+  stopVoice();
+  $("#tourbar").classList.remove("show", "speaking"); $("#spot").style.display = "none";
+}
+function stopVoice(){
+  if (tour.audio){ tour.audio.pause(); tour.audio = null; }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+}
+function placeSpot(){
+  if (!tour.on) return;
+  const st = tour.steps[tour.i], sp = $("#spot");
+  const el = st && st.sel ? document.querySelector(st.sel) : null;
+  if (!el){ Object.assign(sp.style, {left: "50%", top: "40%", width: "0px", height: "0px"}); return; }
+  const r = el.getBoundingClientRect(), pad = 8;
+  Object.assign(sp.style, {left: (r.left - pad) + "px", top: (r.top - pad) + "px", width: (r.width + pad*2) + "px", height: (r.height + pad*2) + "px"});
+}
+setInterval(placeSpot, 250);
+window.addEventListener("resize", placeSpot); window.addEventListener("scroll", placeSpot, {passive:true});
+
+const ACTS = {
+  async start(){
+    if (sim && !sim.stopped) await api("/api/stop");
+    await api("/api/reset");
+    setValues(PRESETS[0].v); $("#stepMode").checked = false; setSpeed(2, false);
+    await api("/api/start", readValues());
+    $("#narr").textContent = T.opened;
+  },
+  async fill(){ if (!isLive()) await ACTS.start(); setValues({psleep:0.2, csleep:3}); await api("/api/tune", {psleep:0.2, csleep:3}); },
+  async drain(){ if (!isLive()) await ACTS.start(); setValues({psleep:3, csleep:0.2}); await api("/api/tune", {psleep:3, csleep:0.2}); },
+  async speed(){ if (!isLive()) await ACTS.start(); setValues({psleep:1, csleep:1}); await api("/api/tune", {psleep:1, csleep:1}); setSpeed(3, false); },
+  async stop(){ if (isLive()) await api("/api/stop"); setSpeed(2, false); },
+};
+
+async function playStep(){
+  const my = ++tour.token, st = tour.steps[tour.i];
+  if (!st){ stopTour(); return; }
+  stopVoice();
+  $("#tbStep").textContent = `${tour.i + 1}/${tour.steps.length}`;
+  $("#tbText").textContent = st.text;
+  $("#tbProg").style.width = ((tour.i + 1) / tour.steps.length * 100) + "%";
+  $("#tbPrev").disabled = tour.i === 0;
+  $("#tbNext").textContent = tour.i === tour.steps.length - 1 ? "Дуусгах ✓" : "Дараах ▶";
+  $("#tbPlay").textContent = "⏸ Түр зогсоох"; tour.paused = false;
+  const el = st.sel ? document.querySelector(st.sel) : null;
+  if (el) el.scrollIntoView({behavior: "smooth", block: "center"});
+  setTimeout(placeSpot, 50); setTimeout(placeSpot, 500);
+  const t0 = performance.now();
+  if (st.act && ACTS[st.act]) ACTS[st.act]();
+  $("#tourbar").classList.add("speaking");
+  await speak(st, tour.i, my);
+  if (my !== tour.token) return;
+  $("#tourbar").classList.remove("speaking");
+  const wait = Math.max(0, (st.dwell || 0) - (performance.now() - t0)) + 700;
+  await new Promise(res => setTimeout(res, wait));
+  while (tour.paused && my === tour.token) await new Promise(res => setTimeout(res, 200));
+  if (my !== tour.token) return;
+  if (tour.i < tour.steps.length - 1){ tour.i++; playStep(); } else stopTour();
+}
+
+function speak(st, i, my){
+  const say = st.say || st.text;
+  const file = `${EX}/${String(i).padStart(2, "0")}.mp3`;
+  const m = tour.manifest && tour.manifest[EX] && tour.manifest[EX][i];
+  return new Promise(resolve => {
+    const done = () => resolve();
+    if (m && m.text === say){                                  // 1) pre-generated neural voice
+      $("#tbSrc").textContent = "Дуу: Yesui (AI, mp3)";
+      const a = new Audio("/voice/" + file); tour.audio = a;
+      a.onended = done; a.onerror = () => { tour.audio = null; viaSpeech(); };
+      a.play().catch(() => viaSpeech());
+      return;
+    }
+    viaSpeech();
+    function viaSpeech(){
+      if (my !== tour.token) return resolve();
+      const v = tour.mnVoice || pickMnVoice();
+      if (v){                                                  // 2) browser Mongolian voice (Microsoft Edge)
+        $("#tbSrc").textContent = "Дуу: " + v.name.replace(/^Microsoft /, "").replace(/ Online \(Natural\)/, "");
+        const parts = say.match(/[^.!?]+[.!?]?/g) || [say];
+        let k = 0;
+        const next = () => {
+          if (my !== tour.token) return resolve();
+          if (k >= parts.length) return resolve();
+          const u = new SpeechSynthesisUtterance(parts[k++].trim());
+          u.voice = v; u.lang = v.lang; u.rate = 1;
+          u.onend = next; u.onerror = next;
+          speechSynthesis.speak(u);
+        };
+        next();
+        return;
+      }
+      $("#tbSrc").textContent = "Дуу олдсонгүй · зөвхөн хадмал";   // 3) subtitles only
+      setTimeout(resolve, Math.max(3000, st.text.length * 62));
+    }
+  });
+}
+
+$("#tourBtn").onclick = () => tour.on ? stopTour() : startTour();
+$("#tbClose").onclick = stopTour;
+$("#tbNext").onclick = () => { if (tour.i < tour.steps.length - 1){ tour.i++; playStep(); } else stopTour(); };
+$("#tbPrev").onclick = () => { if (tour.i > 0){ tour.i--; playStep(); } };
+$("#tbPlay").onclick = () => {
+  tour.paused = !tour.paused;
+  $("#tbPlay").textContent = tour.paused ? "▶ Үргэлжлүүлэх" : "⏸ Түр зогсоох";
+  if (tour.audio){ tour.paused ? tour.audio.pause() : tour.audio.play(); }
+  if ("speechSynthesis" in window){ tour.paused ? speechSynthesis.pause() : speechSynthesis.resume(); }
+};
 
 /* ---------- polling loop ---------- */
 async function poll(){
@@ -880,13 +1153,16 @@ async function poll(){
 
 /* ---------- wiring ---------- */
 buildFields();
-buildCode();
+applyEx("mail");
+$("#speed").addEventListener("input", e => setSpeed(Number(e.target.value), false));
+$("#speed").addEventListener("change", e => setSpeed(Number(e.target.value), true));
+document.querySelectorAll(".ticks span").forEach((t, i) => t.onclick = () => setSpeed(i, true));
 $("#bStart").onclick = async () => {
   const bad = document.querySelector(".num.bad");
   if (bad){ toast("Улаанаар тэмдэглэсэн утгыг засна уу. Зөвшөөрөгдөх хязгаарыг нэрийн доор бичсэн.", true); bad.focus(); return; }
   if (await api("/api/start", readValues())){
-    toast($("#stepMode").checked ? "Алхам алхмаар горим: «Нэг алхам» дарна уу." : "Шуудан ажиллаж эхэллээ!");
-    $("#narr").textContent = "Шуудан нээгдлээ! Илгээгчид захидал хийж, хүлээн авагчид авч эхэллээ.";
+    toast($("#stepMode").checked ? "Алхам алхмаар горим: «Нэг алхам» дарна уу." : T.started);
+    $("#narr").textContent = T.opened;
   }
 };
 $("#bPause").onclick = () => api(sim && sim.paused ? "/api/resume" : "/api/pause");
@@ -896,6 +1172,7 @@ $("#bReset").onclick = async () => {
   if (await api("/api/reset")){
     setValues(Object.fromEntries(FIELDS.map(f => [f.key, f.def]))); clearPreset();
     $("#stepMode").checked = false;
+    setSpeed(2, false);
     $("#narr").textContent = "Шинэчиллээ. Тохиргоогоо сонгоод «Эхлүүлэх» дарна уу.";
   }
 };
@@ -915,9 +1192,12 @@ $("#themeBtn").onclick = () => {
   try { localStorage.setItem("pc-theme", theme); } catch(e){}
 };
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && tour.on){ stopTour(); return; }
   if (e.target.matches("input") || dlg.open) return;
   if (e.code === "Space"){ e.preventDefault(); if (!$("#bPause").disabled) $("#bPause").click(); }
   else if (e.key === "n" || e.key === "N"){ if (!$("#bStep").disabled) $("#bStep").click(); }
+  else if (e.key === "+" || e.key === "="){ setSpeed(SPEEDS.indexOf(speed) + 1, true); }
+  else if (e.key === "-" || e.key === "_"){ setSpeed(SPEEDS.indexOf(speed) - 1, true); }
 });
 poll();
 </script>

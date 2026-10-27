@@ -65,5 +65,28 @@ class TestConcurrency(unittest.TestCase):
     def test_fast_consumers(self): self.run_sim(3, 1, 8, 0.1, 0.0)   # buffer empties
 
 
+class TestLiveTuning(unittest.TestCase):
+    def test_set_speeds_validates_and_applies(self):
+        sim = Simulation(5, 1, 1, 1.0, 1.0)
+        sim.set_speeds(prod_sleep=0.2, cons_sleep="3", speed=2)
+        self.assertEqual((sim.prod_sleep, sim.cons_sleep, sim.speed), (0.2, 3.0, 2.0))
+        for bad in [dict(prod_sleep=-1), dict(cons_sleep="x"), dict(speed=0), dict(speed=10)]:
+            with self.assertRaises(ValueError, msg=str(bad)):
+                sim.set_speeds(**bad)
+        self.assertEqual((sim.prod_sleep, sim.cons_sleep, sim.speed), (0.2, 3.0, 2.0))
+
+    def test_speed_change_takes_effect_while_running(self):
+        sim = Simulation(5, 2, 2, 10, 10)   # very slow: ~nothing happens in 1 s
+        sim.start()
+        threading.Event().wait(1.0)
+        slow = sim.snapshot()["produced"]
+        sim.set_speeds(prod_sleep=0.01, cons_sleep=0.01, speed=4)
+        threading.Event().wait(1.0)
+        sim.stop_all()
+        s = sim.snapshot()
+        self.assertGreater(s["produced"], slow + 5)
+        self.assertEqual(s["produced"] - s["consumed"], sum(x is not None for x in s["slots"]))
+
+
 if __name__ == "__main__":
     unittest.main()
