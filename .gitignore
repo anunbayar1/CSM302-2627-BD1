@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+src/c/producer_consumer
+src/c/producer_consumer_tsan
+src/ui/voice/preview/
