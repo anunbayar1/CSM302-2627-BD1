@@ -6,188 +6,230 @@
 <title>C · Pthreads</title>
 <style>
 :root{
-  --bg:#f6f7f9; --card:#fff; --ink:#111827; --muted:#6b7280; --line:#e5e7eb;
-  --accent:#2563eb; --green:#16a34a; --blue:#2563eb; --amber:#d97706; --amber-bg:#fef3c7;
-  --red:#dc2626; --violet:#7c3aed; --gray:#9ca3af; --term:#0f172a; --term-ink:#e2e8f0;
+  --bg:#f4f5f8; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --soft:#f1f5f9;
+  --accent:#2563eb; --accent-soft:#dbeafe;
+  --green:#16a34a; --green-soft:#dcfce7; --blue:#2563eb; --blue-soft:#dbeafe;
+  --amber:#d97706; --amber-soft:#fef3c7; --red:#dc2626; --red-soft:#fee2e2;
+  --violet:#7c3aed; --violet-soft:#ede9fe; --gray:#94a3b8;
+  --term:#0b1220; --term-ink:#cbd5e1;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.06);
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#0b0f17;--card:#121826;--ink:#e5e7eb;--muted:#9ca3af;--line:#243042;
-        --accent:#60a5fa;--green:#4ade80;--blue:#60a5fa;--amber:#fbbf24;--amber-bg:#33270c;
-        --red:#f87171;--violet:#c4b5fd;--gray:#6b7280;--term:#05070c;color-scheme:dark}
+  :root{--bg:#0b0f17;--card:#121826;--ink:#e2e8f0;--muted:#94a3b8;--line:#1f2a3c;--soft:#172033;
+        --accent:#60a5fa;--accent-soft:#172554;
+        --green:#4ade80;--green-soft:#0f2e1c;--blue:#60a5fa;--blue-soft:#13254a;
+        --amber:#fbbf24;--amber-soft:#3a2a0b;--red:#f87171;--red-soft:#3b1414;
+        --violet:#c4b5fd;--violet-soft:#2a1f4a;--gray:#64748b;--term:#05080f;
+        --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);color-scheme:dark}
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","DejaVu Sans",sans-serif}
-.mono,code,pre{font-family:ui-monospace,"DejaVu Sans Mono",Menlo,monospace}
-header{display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--card);flex-wrap:wrap}
-header a{color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-weight:600}
-header a:hover{border-color:var(--accent)}
-header h1{font-size:16px;margin:0}
-.status{margin-left:auto;display:flex;gap:16px;align-items:center;font-size:13px}
-.status b{font-family:ui-monospace,monospace}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--gray);margin-right:6px;vertical-align:1px}
-.dot.run{background:var(--green)} .dot.pause{background:var(--violet)} .dot.stop{background:var(--red)}
-main{max-width:1240px;margin:0 auto;padding:14px 20px 26px;display:grid;gap:14px}
-section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
-h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 10px;font-weight:600}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","DejaVu Sans",sans-serif;display:flex;flex-direction:column}
+.mono,code,pre,.num{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",Menlo,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
 
-/* controls */
-.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
-.controls label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
-.controls input,.controls select{width:84px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:600 14px ui-monospace,monospace}
-.controls .chk{flex-direction:row;align-items:center;gap:6px;color:var(--ink);padding-bottom:7px}
-.ctl{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
-.stp{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
-.stp button{border:0;border-radius:0;background:transparent;width:30px;height:32px;padding:0;font:700 17px system-ui,sans-serif;color:var(--ink)}
+/* ---------- header ---------- */
+header{flex:none;display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--card);border-bottom:1px solid var(--line)}
+.back{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);font-weight:700}
+.back:hover{border-color:var(--accent)}
+.title{display:flex;align-items:center;gap:10px}
+.title h1{margin:0;font-size:16px;font-weight:700}
+.tag{font:700 11px ui-monospace,monospace;padding:3px 8px;border-radius:999px;background:var(--green-soft);color:var(--green)}
+.status{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;font:600 12.5px system-ui,sans-serif;background:var(--soft);color:var(--muted)}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.run{background:var(--green-soft);color:var(--green)} .pill.run::before{animation:pulse 1.2s infinite}
+.pill.pause{background:var(--violet-soft);color:var(--violet)} .pill.stop{background:var(--red-soft);color:var(--red)}
+@keyframes pulse{50%{opacity:.25}}
+.clock{font:600 13px ui-monospace,monospace;color:var(--muted);min-width:70px;text-align:right}
+
+/* ---------- page grid (fits one screen on desktop) ---------- */
+main{flex:1;min-height:0;display:grid;gap:12px;padding:12px 20px 16px;
+     grid-template-rows:auto minmax(0,1fr) minmax(140px,27%);width:100%;max-width:1680px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.label{font:600 11px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap}
+.ctl{display:flex;flex-direction:column;gap:4px}
+.ctl .label{font-size:10.5px}
+.stp{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--soft);height:34px}
+.stp button{border:0;background:transparent;width:26px;height:100%;font-size:17px;font-weight:700;border-radius:10px}
 .stp button:hover:not(:disabled){background:var(--line)}
-.stp input{width:38px;border:0;background:transparent;text-align:center;padding:0;height:32px;font:700 15px ui-monospace,monospace;color:var(--ink);-moz-appearance:textfield}
+.stp button:disabled{opacity:.35;cursor:not-allowed}
+.stp input{width:34px;border:0;background:transparent;text-align:center;font:700 15px ui-monospace,monospace;color:var(--ink);-moz-appearance:textfield}
 .stp input::-webkit-inner-spin-button,.stp input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-.pv{display:flex;gap:2px;height:8px;margin-top:2px}
-.pv i{width:6px;height:8px;border-radius:1.5px;background:var(--amber)}
-#pv-prod i{background:var(--green);border-radius:50%;width:8px} #pv-cons i{background:var(--blue);border-radius:50%;width:8px}
-.pace{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
-.pace button{border:0;border-radius:0;padding:0 10px;height:32px;font:600 12.5px system-ui,sans-serif;color:var(--muted);background:transparent}
-.pace button.on{background:var(--accent);color:#fff}
-.pace button:hover:not(.on){background:var(--line)}
-.controls .chk input{width:auto}
-.btns{display:flex;gap:8px;margin-left:auto}
-button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:7px;padding:7px 13px;font:600 13.5px system-ui,sans-serif;cursor:pointer}
-button:hover:not(:disabled){border-color:var(--accent)}
-button:disabled{opacity:.4;cursor:not-allowed}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.err{display:none;color:var(--red);font-weight:600;margin-top:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;background:var(--soft);height:34px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:0 8px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.seg.p button.on{color:var(--green)} .seg.c button.on{color:var(--blue)}
+.vsep{width:1px;align-self:stretch;background:var(--line)}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none}
+.actions{margin-left:auto;display:flex;gap:8px}
+.btn{height:36px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:0 11px;white-space:nowrap;font-weight:600;display:inline-flex;align-items:center;gap:7px}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.icon{width:36px;padding:0;justify-content:center}
+.err{display:none;margin:0 14px 10px;color:var(--red);font-weight:600}
 
-.grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:start}
+/* ---------- stage: producers → buffer → consumers ---------- */
+.stage{display:grid;grid-template-columns:minmax(190px,1fr) 32px minmax(0,2.4fr) 32px minmax(190px,1fr);padding:14px;min-height:0}
+.col{display:flex;flex-direction:column;min-height:0}
+.colhead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.colhead .dot{width:9px;height:9px;border-radius:50%}
+.colhead b{font-size:14px}
+.threads{display:flex;flex-direction:column;gap:7px;overflow:auto;min-height:0;padding:2px}
+.th{border:1px solid var(--line);border-left:4px solid var(--gray);border-radius:10px;padding:7px 10px;background:var(--card);transition:background .2s,border-color .2s}
+.th .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.th .nm{font:700 14px ui-monospace,monospace}
+.th .st{font:700 11px ui-monospace,monospace;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.th code{display:block;margin-top:3px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.th[data-st=producing]{border-left-color:var(--green)} .th[data-st=producing] .st{background:var(--green-soft);color:var(--green)}
+.th[data-st=consuming]{border-left-color:var(--blue)} .th[data-st=consuming] .st{background:var(--blue-soft);color:var(--blue)}
+.th[data-st=waiting]{border-left-color:var(--amber);background:var(--amber-soft)} .th[data-st=waiting] .st{background:var(--amber);color:#fff}
+.th[data-st=waiting] code{color:var(--amber);font-weight:700}
+.th[data-st=paused]{border-left-color:var(--violet)} .th[data-st=paused] .st{background:var(--violet-soft);color:var(--violet)}
+.th[data-st=stopped],.th[data-st=idle]{opacity:.6}
+.th.hit{animation:hit .55s ease-out}
+@keyframes hit{0%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+.flow{display:grid;place-items:center;color:var(--line);font-size:22px;font-weight:800}
+.empty{color:var(--muted);font-size:13px;padding:8px 2px}
 
-/* buffer */
+.center{display:flex;flex-direction:column;min-height:0;gap:12px}
+.bufwrap{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--soft)}
+.bufhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.bufhead code{font-size:12px;color:var(--muted)}
 .buf{display:grid;gap:6px}
-.ptr{text-align:center;font:700 12px ui-monospace,monospace;height:18px}
-.ptr.out{color:var(--blue)} .ptr.in{color:var(--green)}
-.cell{border:2px dashed var(--line);border-radius:8px;height:58px;display:grid;place-items:center;font:700 19px ui-monospace,monospace;color:var(--muted)}
-.cell.full{border:2px solid var(--amber);background:var(--amber-bg);color:var(--ink)}
-.cell.fin{animation:fin .6s ease-out} .cell.fout{animation:fout .6s ease-out}
+.ptr{text-align:center;height:20px}
+.ptr span{display:none;font:700 11px ui-monospace,monospace;padding:2px 7px;border-radius:999px}
+.ptr.on span{display:inline-block}
+.ptr.out span{background:var(--blue-soft);color:var(--blue)} .ptr.in span{background:var(--green-soft);color:var(--green)}
+.cell{height:clamp(40px,10vh,120px);border-radius:10px;border:2px dashed var(--line);background:var(--card);display:grid;place-items:center;font:800 clamp(15px,2.6vh,28px) ui-monospace,monospace;color:var(--muted);transition:background .2s,border-color .2s}
+.cell.full{border:2px solid var(--amber);background:var(--amber-soft);color:var(--ink)}
+.cell.fin{animation:fin .55s ease-out} .cell.fout{animation:fout .55s ease-out}
 @keyframes fin{0%{box-shadow:0 0 0 5px var(--green);transform:scale(1.07)}100%{box-shadow:0 0 0 0 transparent;transform:none}}
 @keyframes fout{0%{box-shadow:0 0 0 5px var(--blue);transform:scale(.93)}100%{box-shadow:0 0 0 0 transparent;transform:none}}
-.idx{text-align:center;font:11px ui-monospace,monospace;color:var(--muted)}
-.last{margin-top:10px;font:600 15px ui-monospace,monospace;min-height:22px}
+.idx{text-align:center;font:11px ui-monospace,monospace;color:var(--muted);margin-top:3px}
+.last{margin-top:6px;text-align:center;font:700 14px ui-monospace,monospace;min-height:20px;color:var(--muted)}
 .last .in{color:var(--green)} .last .out{color:var(--blue)}
 
-/* semaphores */
-.sems{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
-.sem{border:1px solid var(--line);border-radius:9px;padding:10px 12px}
-.sem .top{display:flex;justify-content:space-between;align-items:baseline}
-.sem .name{font:700 14px ui-monospace,monospace}
-.sem .type{font:11px ui-monospace,monospace;color:var(--muted)}
-.sem .val{font:800 34px ui-monospace,monospace;line-height:1.15;margin:4px 0 6px}
-.sem.zero{border-color:var(--red)} .sem.zero .val{color:var(--red)}
-.bar{display:flex;gap:3px;flex-wrap:wrap}
-.bar i{width:12px;height:12px;border-radius:3px;background:var(--line)}
+.sems{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.15fr);gap:10px;flex:none}
+.sem{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card);min-width:0}
+.sem .top{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.sem .name{font:700 13px ui-monospace,monospace}
+.sem .type{font:10px ui-monospace,monospace;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sem .val{font:800 30px ui-monospace,monospace;line-height:1.15;margin:4px 0 6px}
+.sem.zero{border-color:var(--red);background:var(--red-soft)} .sem.zero .val{color:var(--red)}
+.bar{display:flex;gap:3px;min-height:10px}
+.bar i{flex:1;max-width:12px;height:10px;border-radius:3px;background:var(--line)}
 #sEmpty .bar i.on{background:var(--green)} #sFull .bar i.on{background:var(--amber)}
-.lock{display:flex;align-items:center;gap:8px;margin:6px 0 4px}
-.lock svg{width:34px;height:34px}
-.lock b{font:800 18px ui-monospace,monospace}
-.mq{display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-height:20px;font:12px ui-monospace,monospace;color:var(--muted)}
-.mq .w{background:var(--amber);color:#fff;border-radius:999px;padding:1px 7px;font-weight:700}
+.lock{display:flex;align-items:center;gap:8px;margin-top:6px;height:34px}
+.lock svg{width:30px;height:30px;flex:none}
+.lock b{font:800 17px ui-monospace,monospace}
+.mq{margin-top:4px;display:flex;gap:4px;align-items:center;min-height:18px;font:11px ui-monospace,monospace;color:var(--muted)}
+.mq .w{background:var(--amber);color:#fff;border-radius:999px;padding:0 6px;font-weight:700}
+.totals{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;align-items:end}
+.totals div{font-size:10.5px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.totals b{display:block;font:800 20px ui-monospace,monospace;color:var(--ink)}
+.check{margin-top:8px;font:700 12.5px ui-monospace,monospace;padding:4px 9px;border-radius:999px;background:var(--soft);color:var(--muted);text-align:center}
+.check.ok{background:var(--green-soft);color:var(--green)} .check.bad{background:var(--red-soft);color:var(--red)}
 
-/* threads */
-.th{display:grid;grid-template-columns:44px 104px minmax(0,1fr);align-items:center;gap:10px;padding:7px 8px;border-radius:7px;border-bottom:1px solid var(--line)}
-.th:last-child{border-bottom:0}
-.th.waiting{background:var(--amber-bg)}
-.th .nm{font:700 14px ui-monospace,monospace}
-.pill{font:700 11.5px ui-monospace,monospace;padding:3px 8px;border-radius:999px;color:#fff;background:var(--gray);text-align:center}
-.pill.producing{background:var(--green)} .pill.consuming{background:var(--blue)}
-.pill.waiting{background:var(--amber)} .pill.paused{background:var(--violet)}
-.th code{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.th.waiting code{color:var(--amber);font-weight:700}
-
-/* totals */
-.totals{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
-.totals b{font:800 20px ui-monospace,monospace;color:var(--ink);margin-left:4px}
-.check{margin-left:auto;font:700 13px ui-monospace,monospace;padding:4px 10px;border-radius:999px;background:var(--bg)}
-.check.ok{color:var(--green)} .check.bad{color:var(--red)}
-
-/* log */
-.logbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap}
-.logtools{display:flex;gap:8px;align-items:center}
-.logtools .n{font:12.5px ui-monospace,monospace;color:var(--muted)}
-.logtools button{padding:5px 10px;font-size:12.5px}
-pre{margin:0;background:var(--term);color:var(--term-ink);border-radius:8px;padding:10px 12px;height:260px;overflow:auto;font-size:12.5px;line-height:1.5;white-space:pre}
+/* ---------- log ---------- */
+.logc{display:flex;flex-direction:column;min-height:0;padding:10px 14px 12px}
+.logbar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.logbar .n{margin-left:auto;font:12px ui-monospace,monospace;color:var(--muted)}
+.logbar .btn{height:30px;font-size:12.5px;padding:0 10px}
+pre{flex:1;min-height:0;margin:0;background:var(--term);color:var(--term-ink);border-radius:10px;padding:10px 14px;overflow:auto;font-size:12.5px;line-height:1.55;white-space:pre}
 pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
-@media (max-width:900px){.grid{grid-template-columns:1fr}.status{margin-left:0}.btns{margin-left:0}}
+
+@media (max-width:1400px){.vsep{display:none}.actions .t{display:none}.actions .btn{width:40px;padding:0;justify-content:center}.actions .btn.primary{width:auto;padding:0 14px}.actions .btn.primary .t{display:inline}.ctl .label{font-size:10px}}
+@media (max-width:1000px){
+  body{display:block}
+  main{grid-template-rows:auto auto 340px}
+  .stage{grid-template-columns:1fr;gap:12px}
+  .flow{display:none}
+  .threads{max-height:none}
+  .sems{grid-template-columns:1fr 1fr}
+  .actions{margin-left:0}
+}
 </style>
 </head>
 <body>
 <header>
-  <a href="/">←</a>
-  <h1>C · Pthreads</h1>
+  <a class="back" href="/" title="Нүүр">←</a>
+  <div class="title"><h1>Producer–Consumer</h1><span class="tag">C · Pthreads</span></div>
   <div class="status">
-    <span><span class="dot" id="dot"></span><span id="stText">—</span></span>
-    <span>t <b id="t">0.00</b>s</span>
-    <span><b id="spd">1×</b></span>
+    <span class="pill" id="pill">—</span>
+    <span class="clock" id="clock">0.00 s</span>
+    <span class="pill" id="spd">1×</span>
   </div>
 </header>
 
 <main>
-  <section>
-    <div class="controls">
-      <div class="ctl"><span>BUFFER_SIZE</span><div class="stp" data-for="size"><button type="button">−</button><input id="size" type="number" min="1" max="20" value="5"><button type="button">+</button></div><div class="pv" id="pv-size"></div></div>
-      <div class="ctl"><span>producers</span><div class="stp" data-for="prod"><button type="button">−</button><input id="prod" type="number" min="1" max="10" value="2"><button type="button">+</button></div><div class="pv" id="pv-prod"></div></div>
-      <div class="ctl"><span>consumers</span><div class="stp" data-for="cons"><button type="button">−</button><input id="cons" type="number" min="1" max="10" value="2"><button type="button">+</button></div><div class="pv" id="pv-cons"></div></div>
-      <div class="ctl"><span>producer хурд</span><div class="pace" data-for="psleep"><button type="button" data-v="2">удаан</button><button type="button" data-v="1">дунд</button><button type="button" data-v="0.3">хурдан</button></div><input id="psleep" type="hidden" value="1"></div>
-      <div class="ctl"><span>consumer хурд</span><div class="pace" data-for="csleep"><button type="button" data-v="2">удаан</button><button type="button" data-v="1">дунд</button><button type="button" data-v="0.3">хурдан</button></div><input id="csleep" type="hidden" value="1"></div>
-      <label>хурд<select id="speed"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+  <section class="card">
+    <div class="toolbar">
+      <div class="ctl"><span class="label">BUFFER_SIZE</span><div class="stp" data-for="size"><button type="button">−</button><input id="size" type="number" min="1" max="20" value="5"><button type="button">+</button></div></div>
+      <div class="ctl"><span class="label">producers</span><div class="stp" data-for="prod"><button type="button">−</button><input id="prod" type="number" min="1" max="10" value="2"><button type="button">+</button></div></div>
+      <div class="ctl"><span class="label">consumers</span><div class="stp" data-for="cons"><button type="button">−</button><input id="cons" type="number" min="1" max="10" value="2"><button type="button">+</button></div></div>
+      <div class="vsep"></div>
+      <div class="ctl"><span class="label">producer хурд</span><div class="seg p" data-for="psleep"><button type="button" data-v="2">удаан</button><button type="button" data-v="1">дунд</button><button type="button" data-v="0.3">хурдан</button></div><input id="psleep" type="hidden" value="1"></div>
+      <div class="ctl"><span class="label">consumer хурд</span><div class="seg c" data-for="csleep"><button type="button" data-v="2">удаан</button><button type="button" data-v="1">дунд</button><button type="button" data-v="0.3">хурдан</button></div><input id="csleep" type="hidden" value="1"></div>
+      <div class="ctl"><span class="label">хурд</span><div class="seg" data-for="speed"><button type="button" data-v="0.5">½×</button><button type="button" data-v="1">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="4">4×</button></div><input id="speed" type="hidden" value="1"></div>
       <label class="chk"><input id="paused" type="checkbox">step</label>
-      <div class="btns">
-        <button id="bStart" class="primary">▶ Start</button>
-        <button id="bPause">⏸ Pause</button>
-        <button id="bStep">⏭ Step</button>
-        <button id="bStop">■ Stop</button>
-        <button id="bReset" title="Reset">↺</button>
+      <div class="actions">
+        <button class="btn primary" id="bStart" title="Start">▶<span class="t"> Start</span></button>
+        <button class="btn" id="bPause" title="Pause">⏸<span class="t"> Pause</span></button>
+        <button class="btn" id="bStep" title="Step">⏭<span class="t"> Step</span></button>
+        <button class="btn" id="bStop" title="Stop">■<span class="t"> Stop</span></button>
+        <button class="btn icon" id="bReset" title="Reset">↺</button>
       </div>
     </div>
     <div class="err" id="err"></div>
   </section>
 
-  <div class="grid">
-    <section>
-      <h2>buffer</h2>
-      <div class="buf" id="outRow"></div>
-      <div class="buf" id="cells"></div>
-      <div class="buf" id="idxRow"></div>
-      <div class="buf" id="inRow"></div>
-      <div class="last" id="last"></div>
-
+  <section class="card stage">
+    <div class="col">
+      <div class="colhead"><span class="dot" style="background:var(--green)"></span><b>producers</b></div>
+      <div class="threads" id="prods"><div class="empty">—</div></div>
+    </div>
+    <div class="flow">→</div>
+    <div class="center">
+      <div class="bufwrap">
+        <div class="bufhead"><span class="label">buffer</span><code id="decl">buffer_item buffer[5]</code></div>
+        <div class="buf" id="outRow"></div>
+        <div class="buf" id="cells"></div>
+        <div class="buf" id="idxRow"></div>
+        <div class="buf" id="inRow"></div>
+        <div class="last" id="last"></div>
+      </div>
       <div class="sems">
         <div class="sem" id="sEmpty"><div class="top"><span class="name">empty</span><span class="type">sem_t</span></div><div class="val" id="vEmpty">–</div><div class="bar" id="bEmpty"></div></div>
         <div class="sem" id="sFull"><div class="top"><span class="name">full</span><span class="type">sem_t</span></div><div class="val" id="vFull">–</div><div class="bar" id="bFull"></div></div>
-        <div class="sem" id="sMutex" style="color:var(--green)"><div class="top" style="color:var(--ink)"><span class="name">mutex</span><span class="type">pthread_mutex_t</span></div>
+        <div class="sem" id="sMutex" style="color:var(--green)"><div class="top" style="color:var(--ink)"><span class="name">mutex</span><span class="type">pthread_mutex</span></div>
           <div class="lock"><svg viewBox="0 0 48 48" aria-hidden="true"><path id="shackle" d="M15 22v-6a9 9 0 0 1 18 0v-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" transform="translate(0 -4)"/><rect x="9" y="21" width="30" height="22" rx="6" fill="currentColor"/></svg><b id="vMutex">free</b></div>
           <div class="mq" id="mWait"></div></div>
+        <div class="sem">
+          <div class="totals"><div>produced<b id="vProd">0</b></div><div>consumed<b id="vCons">0</b></div><div>buffer<b id="vCount">0</b></div></div>
+          <div class="check" id="check">—</div>
+        </div>
       </div>
+    </div>
+    <div class="flow">→</div>
+    <div class="col">
+      <div class="colhead"><span class="dot" style="background:var(--blue)"></span><b>consumers</b></div>
+      <div class="threads" id="conss"><div class="empty">—</div></div>
+    </div>
+  </section>
 
-      <div class="totals">
-        <span>produced<b id="vProd">0</b></span>
-        <span>consumed<b id="vCons">0</b></span>
-        <span>buffer<b id="vCount">0</b></span>
-        <span class="check" id="check">—</span>
-      </div>
-    </section>
-
-    <section>
-      <h2>threads</h2>
-      <div id="threads" style="color:var(--muted)">—</div>
-    </section>
-  </div>
-
-  <section>
+  <section class="card logc">
     <div class="logbar">
-      <h2 style="margin:0">log</h2>
-      <div class="logtools">
-        <span class="n" id="logN">0</span>
-        <button id="dlTxt">⬇ .txt</button>
-        <button id="dlCsv">⬇ .csv</button>
-        <button id="clrLog" title="Цэвэрлэх">✕</button>
-      </div>
+      <span class="label">log</span>
+      <span class="n" id="logN">0</span>
+      <button class="btn" id="dlTxt">⬇ .txt</button>
+      <button class="btn" id="dlCsv">⬇ .csv</button>
+      <button class="btn icon" id="clrLog" title="Цэвэрлэх">✕</button>
     </div>
     <pre id="log"></pre>
   </section>
@@ -199,12 +241,12 @@ const API = "/api/c";
 const $ = s => document.querySelector(s);
 const CODE = {
   P: {sleeping: "nanosleep()", producing: "item = rand()", paused: "— step —",
-      wsem: "sem_wait(&empty)", lock: "pthread_mutex_lock()", stopped: "—", idle: "—"},
+      wsem: "sem_wait(&empty)", lock: "pthread_mutex_lock(&mutex)", stopped: "pthread_exit()", idle: "—"},
   C: {sleeping: "nanosleep()", consuming: "use(item)", paused: "— step —",
-      wsem: "sem_wait(&full)", lock: "pthread_mutex_lock()", stopped: "—", idle: "—"},
+      wsem: "sem_wait(&full)", lock: "pthread_mutex_lock(&mutex)", stopped: "pthread_exit()", idle: "—"},
 };
 let run = -1, seq = 0, sim = null, nKey = "", logLines = [], fullLog = [], csvRows = [], runInfo = null, summarized = false;
-let holder = null;   // {who, until}: last thread inside the critical section
+let holder = null;   // {who, until}: last thread inside the critical section (the real lock lasts microseconds)
 
 /* ---------- log ---------- */
 function plainLine(e){
@@ -225,8 +267,9 @@ function flushLog(){
   const atEnd = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 30;
   pre.innerHTML = logLines.join("\n");
   if (atEnd) pre.scrollTop = pre.scrollHeight;
-  $("#logN").textContent = fullLog.length;
+  $("#logN").textContent = fullLog.length + " lines";
 }
+function flash(el, cls){ if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function onEvent(e){
   const plain = plainLine(e);
   addLog(htmlLine(plain), plain);
@@ -235,10 +278,11 @@ function onEvent(e){
   if (csvRows.length > 200000) csvRows.shift();
   holder = {who: e.who, until: performance.now() + 500};
   const cell = document.querySelectorAll("#cells .cell")[e.slot];
-  if (cell){ cell.classList.remove("fin", "fout"); void cell.offsetWidth; cell.classList.add(e.kind === "insert" ? "fin" : "fout"); }
+  if (cell){ cell.classList.remove("fin", "fout"); flash(cell, e.kind === "insert" ? "fin" : "fout"); }
+  flash(document.querySelector(`.th[data-k="${e.who}"]`), "hit");
   $("#last").innerHTML = e.kind === "insert"
-    ? `<span class="in">${e.who} → [${e.slot}] = ${e.item}</span>`
-    : `<span class="out">${e.who} ← [${e.slot}] = ${e.item}</span>`;
+    ? `<span class="in">${e.who} → buffer[${e.slot}] = ${e.item}</span>`
+    : `<span class="out">buffer[${e.slot}] → ${e.who} (${e.item})</span>`;
 }
 function stamp(){
   const d = new Date(), z = x => String(x).padStart(2, "0");
@@ -257,28 +301,45 @@ function build(s){
   for (const id of ["#outRow", "#cells", "#idxRow", "#inRow"]) $(id).style.gridTemplateColumns = cols;
   $("#cells").innerHTML = s.slots.map(() => `<div class="cell"></div>`).join("");
   $("#idxRow").innerHTML = s.slots.map((_, i) => `<div class="idx">${i}</div>`).join("");
-  $("#outRow").innerHTML = s.slots.map(() => `<div class="ptr out"></div>`).join("");
-  $("#inRow").innerHTML = s.slots.map(() => `<div class="ptr in"></div>`).join("");
+  $("#outRow").innerHTML = s.slots.map(() => `<div class="ptr out"><span>out ▼</span></div>`).join("");
+  $("#inRow").innerHTML = s.slots.map(() => `<div class="ptr in"><span>▲ in</span></div>`).join("");
   $("#bEmpty").innerHTML = $("#bFull").innerHTML = s.slots.map(() => "<i></i>").join("");
-  $("#threads").innerHTML = Object.keys(s.states).map(k =>
-    `<div class="th" data-k="${k}"><span class="nm">${k}</span><span class="pill"></span><code></code></div>`).join("");
-  $("#threads").style.color = "";
-  nKey = n + "|" + Object.keys(s.states).join(",");
+  const card = k => `<div class="th" data-k="${k}" data-st="idle"><div class="row"><span class="nm">${k}</span><span class="st">idle</span></div><code>—</code></div>`;
+  const names = Object.keys(s.states);
+  $("#prods").innerHTML = names.filter(k => k[0] === "P").map(card).join("");
+  $("#conss").innerHTML = names.filter(k => k[0] === "C").map(card).join("");
+  $("#decl").textContent = `buffer_item buffer[${n}]`;
+  nKey = n + "|" + names.join(",");
+}
+function clearView(){
+  nKey = "";
+  for (const id of ["#outRow", "#cells", "#idxRow", "#inRow", "#bEmpty", "#bFull"]) $(id).innerHTML = "";
+  $("#prods").innerHTML = $("#conss").innerHTML = `<div class="empty">—</div>`;
+  for (const id of ["#vEmpty", "#vFull"]) $(id).textContent = "–";
+  for (const id of ["#vProd", "#vCons", "#vCount"]) $(id).textContent = "0";
+  $("#sEmpty").classList.remove("zero"); $("#sFull").classList.remove("zero");
+  $("#vMutex").textContent = "free"; $("#sMutex").style.color = "var(--green)"; $("#mWait").innerHTML = "";
+  $("#check").textContent = "—"; $("#check").className = "check"; $("#last").textContent = "";
 }
 
 function render(s){
   const live = s && !s.stopped;
   $("#bStart").disabled = !!live;
   for (const id of ["#bPause", "#bStep", "#bStop"]) $(id).disabled = !live;
-  $("#bPause").textContent = s && s.paused && live ? "▶ Resume" : "⏸ Pause";
+  $("#bPause").innerHTML = s && s.paused && live ? '▶<span class="t"> Resume</span>' : '⏸<span class="t"> Pause</span>';
   for (const id of ["#size", "#prod", "#cons", "#paused"]) $(id).disabled = !!live;
   document.querySelectorAll(".stp button").forEach(b => b.disabled = !!live);
-  if (!s){ $("#dot").className = "dot"; $("#stText").textContent = "—"; $("#t").textContent = "0.00"; return; }
+  const pill = $("#pill");
+  if (!s){
+    pill.className = "pill"; pill.textContent = "ready"; $("#clock").textContent = "0.00 s";
+    if (nKey) clearView();
+    return;
+  }
   if (nKey !== s.slots.length + "|" + Object.keys(s.states).join(",")) build(s);
 
-  $("#dot").className = "dot " + (s.stopped ? "stop" : s.paused ? "pause" : "run");
-  $("#stText").textContent = s.stopped ? "stopped" : s.paused ? "paused" : "running";
-  $("#t").textContent = s.elapsed.toFixed(2);
+  pill.className = "pill " + (s.stopped ? "stop" : s.paused ? "pause" : "run");
+  pill.textContent = s.stopped ? "stopped" : s.paused ? "paused" : "running";
+  $("#clock").textContent = s.elapsed.toFixed(2) + " s";
   $("#spd").textContent = s.speed + "×";
 
   document.querySelectorAll("#cells .cell").forEach((el, i) => {
@@ -286,8 +347,8 @@ function render(s){
     el.textContent = v === null ? "" : v;
     el.classList.toggle("full", v !== null);
   });
-  document.querySelectorAll("#outRow .ptr").forEach((el, i) => el.textContent = i === s.out_idx ? "out ▼" : "");
-  document.querySelectorAll("#inRow .ptr").forEach((el, i) => el.textContent = i === s.in_idx ? "▲ in" : "");
+  document.querySelectorAll("#outRow .ptr").forEach((el, i) => el.classList.toggle("on", i === s.out_idx));
+  document.querySelectorAll("#inRow .ptr").forEach((el, i) => el.classList.toggle("on", i === s.in_idx));
 
   const sem = (box, val, bar, v) => {
     $(val).textContent = v;
@@ -296,7 +357,6 @@ function render(s){
   };
   sem("#sEmpty", "#vEmpty", "#bEmpty", s.empty);
   sem("#sFull", "#vFull", "#bFull", s.full);
-  // the real lock is held for microseconds: show its last owner for a moment
   const kh = holder && holder.until > performance.now() && !s.stopped ? holder : null;
   const locked = s.mutex_locked || !!kh;
   $("#vMutex").textContent = kh ? kh.who : (locked ? "locked" : "free");
@@ -313,14 +373,13 @@ function render(s){
   ch.textContent = `${s.produced} − ${s.consumed} = ${count} ${ok ? "✓" : (s.stopped ? "✗" : "…")}`;
   ch.className = "check " + (ok ? "ok" : s.stopped ? "bad" : "");
 
-  document.querySelectorAll("#threads .th").forEach(row => {
+  document.querySelectorAll(".th").forEach(row => {
     const k = row.dataset.k, st = s.states[k] || "idle", side = k[0];
     let code = CODE[side][st] || "";
     if (st === "waiting") code = (side === "P" ? s.empty : s.full) === 0 ? CODE[side].wsem : CODE[side].lock;
-    row.className = "th" + (st === "waiting" ? " waiting" : "");
-    const pill = row.children[1];
-    pill.className = "pill " + st; pill.textContent = st;
-    row.children[2].textContent = code;
+    if (row.dataset.st !== st) row.dataset.st = st;
+    row.querySelector(".st").textContent = st;
+    row.querySelector("code").textContent = code;
   });
 }
 
@@ -331,8 +390,8 @@ async function poll(){
     const d = await r.json();
     if (r.status === 503){ showErr(d.error); setTimeout(poll, 2000); return; }
     if (d.run !== run){
-      run = d.run; logLines = []; fullLog = []; csvRows = []; nKey = ""; sim = null; runInfo = null; summarized = false;
-      $("#last").textContent = "";
+      run = d.run; logLines = []; fullLog = []; csvRows = []; sim = null; runInfo = null; summarized = false;
+      clearView(); flushLog();
     }
     if (d.sim && !sim){
       const c = d.config || {};
@@ -366,40 +425,28 @@ async function api(action, body){
   }catch(e){ showErr("Сервертэй холбогдож чадсангүй (gui.py)"); return false; }
 }
 const val = id => $(id).value;
-function preview(id){
-  const n = Math.max(0, Math.min(20, parseInt($("#" + id).value, 10) || 0));
-  $("#pv-" + id).innerHTML = "<i></i>".repeat(n);
-}
 document.querySelectorAll(".stp").forEach(box => {
   const inp = box.querySelector("input"), [dec, inc] = box.querySelectorAll("button");
-  const set = k => { const v = Math.max(+inp.min, Math.min(+inp.max, (parseInt(inp.value, 10) || +inp.min) + k)); inp.value = v; preview(inp.id); };
+  const set = k => { inp.value = Math.max(+inp.min, Math.min(+inp.max, (parseInt(inp.value, 10) || +inp.min) + k)); };
   dec.onclick = () => set(-1); inc.onclick = () => set(1);
-  inp.addEventListener("input", () => preview(inp.id));
-  preview(inp.id);
 });
-function paceSync(){
-  document.querySelectorAll(".pace").forEach(g => {
+function segSync(){
+  document.querySelectorAll(".seg").forEach(g => {
     const v = Number($("#" + g.dataset.for).value);
     g.querySelectorAll("button").forEach(b => b.classList.toggle("on", Number(b.dataset.v) === v));
   });
 }
-document.querySelectorAll(".pace").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
-  $("#" + g.dataset.for).value = b.dataset.v; paceSync();
+document.querySelectorAll(".seg").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
+  $("#" + g.dataset.for).value = b.dataset.v; segSync();
   if (sim && !sim.stopped) api("tune", {psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed")});
 }));
-paceSync();
+segSync();
 $("#bStart").onclick = () => api("start", {size: val("#size"), prod: val("#prod"), cons: val("#cons"),
   psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed"), paused: $("#paused").checked});
 $("#bPause").onclick = () => api(sim && sim.paused ? "resume" : "pause");
 $("#bStep").onclick = () => api("step");
 $("#bStop").onclick = () => api("stop");
-$("#bReset").onclick = async () => { if (await api("reset")){ logLines = []; fullLog = []; csvRows = []; flushLog(); } };
-let tuneT;
-for (const id of ["#speed"]) $(id).addEventListener("input", () => {
-  if (!sim || sim.stopped) return;
-  clearTimeout(tuneT);
-  tuneT = setTimeout(() => api("tune", {psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed")}), 150);
-});
+$("#bReset").onclick = async () => { if (await api("reset")){ logLines = []; fullLog = []; csvRows = []; flushLog(); clearView(); } };
 $("#clrLog").onclick = () => { logLines = []; fullLog = []; csvRows = []; flushLog(); };
 $("#dlTxt").onclick = () => {
   if (!fullLog.length) return showErr("Лог хоосон байна.");

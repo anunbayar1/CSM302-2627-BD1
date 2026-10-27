@@ -282,7 +282,8 @@ td code{font-size:12px}
 .btn.tour:hover:not(:disabled){filter:brightness(1.1);background:linear-gradient(135deg,#4f46e5,#9333ea)}
 /* guided voice tour */
 #spot{position:fixed;z-index:35;border-radius:18px;pointer-events:none;box-shadow:0 0 0 9999px rgba(8,10,24,.55),0 0 0 3px #a5b4fc;transition:all .45s cubic-bezier(.4,0,.2,1);display:none}
-#tourbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:40;width:min(860px,calc(100vw - 32px));background:var(--card);color:var(--ink);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.35);padding:16px 18px;display:none}
+#tourbar.attop{top:72px;bottom:auto}
+#tourbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:40;transition:top .3s,bottom .3s,left .3s;width:min(860px,calc(100vw - 32px));background:var(--card);color:var(--ink);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.35);padding:16px 18px;display:none}
 #tourbar.show{display:block;animation:fadein .3s}
 .tb-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .tb-top .wave{display:flex;gap:3px;align-items:flex-end;height:18px}
@@ -322,7 +323,7 @@ td code{font-size:12px}
   .top{position:static;flex:none;padding:8px 20px}
   .brand svg,.brandic svg{width:34px;height:34px}
   .brand h1{font-size:17px}
-  .layout{flex:1;min-height:0;max-width:none;grid-template-columns:290px minmax(0,1fr);gap:12px;padding:10px 16px 12px}
+  .layout{flex:1;min-height:0;width:100%;max-width:none;margin:0;grid-template-columns:290px minmax(0,1fr);gap:12px;padding:10px 16px 12px}
   .controls{gap:6px}
   .controls .btn{font-size:13px;padding:8px 6px;min-width:0}
   .controls .wide{padding:10px}
@@ -544,7 +545,7 @@ td code{font-size:12px}
           <div>Хийсэн<b id="sProd">0</b></div>
           <div>Авсан<b id="sCons">0</b></div>
           <div><span data-t="inBox"></span><b id="sIn">0</b></div>
-          <div style="margin-left:auto;text-align:right">Дүүрэн хязгаар<b id="sMax">–</b></div>
+          <div style="margin-left:auto;text-align:right">Дүүрэх хязгаар<b id="sMax">–</b></div>
         </div>
       </div>
     </div>
@@ -597,7 +598,7 @@ const THEMES = {
   mail: {
     name: "Шуудан", title: "Шуудангийн хайрцаг", boxLabel: "ШУУДАН",
     prod: "Шуудан зөөгч", prods: "Шуудан зөөгчид", prodL: "шуудан зөөгч", prodGen: "Шуудан зөөгчийн",
-    cons: "Хүлээн авагч", conss: "Хүлээн авагчид", consL: "хүлээн авагч", consGen: "Хүлээн авагчийн",
+    cons: "Хэрэглэгч", conss: "Хэрэглэгчид", consL: "хэрэглэгч", consGen: "Хэрэглэгчийн",
     box: "Шуудангийн хайрцаг", boxC: "Хайрцаг", boxL: "хайрцаг", boxGen: "Хайрцгийн", boxDat: "хайрцагт", boxIn: "хайрцаг дахь",
     slot: "нүд", slotDat: "нүдэнд", slotAbl: "нүднээс", slotGen: "нүдний", slotWith: "нүдтэй",
     item: "захидал", itemOwn: "захидлаа", itemC: "Захидал", itemAcc: "захидлыг", itemGen: "захидлын",
@@ -605,8 +606,8 @@ const THEMES = {
     put: "хийлээ", putLog: "хийв", putInf: "хийх", codePut: "хийнэ", putPast: "хийсэн",
     lockRule: "Нэг удаад ганцхан хүн хайрцгийг онгойлгоно", lockBusy: "Нэг хүн хайрцгийг онгойлгосон байна",
     closed: "Шуудан хаалттай байна", closedNow: "Шуудан хаагдлаа.", started: "Шуудан ажиллаж эхэллээ!",
-    opened: "Шуудан нээгдлээ! Шуудан зөөгчид захидал авчирч, хүлээн авагчид авч эхэллээ.",
-    lead: "Гудамжинд цөөхөн нүдтэй, жижигхэн шуудангийн хайрцаг байдаг. Шуудан зөөгчид захидал авчирч хайрцагт хийдэг, хүлээн авагчид ирж захидлаа аваад уншдаг. Хүн бүр өөрийн хурдаар ажилладаг тул хоорондоо мөргөлдөхгүйн тулд гурван дүрэм сахидаг.",
+    opened: "Шуудан нээгдлээ! Шуудан зөөгчид захидал авчирч, хэрэглэгчид авч эхэллээ.",
+    lead: "Гудамжинд цөөхөн нүдтэй, жижигхэн шуудангийн хайрцаг байдаг. Шуудан зөөгчид захидал авчирч хайрцагт хийдэг, хэрэглэгчид ирж захидлаа аваад уншдаг. Хүн бүр өөрийн хурдаар ажилладаг тул хоорондоо мөргөлдөхгүйн тулд гурван дүрэм сахидаг.",
     floor: "Газар хаяж болохгүй!",
   },
 };
@@ -1142,7 +1143,7 @@ async function startTour(){
 function stopTour(){
   tour.on = false; tour.token++;
   stopVoice();
-  $("#tourbar").classList.remove("show", "speaking"); $("#spot").style.display = "none";
+  $("#tourbar").classList.remove("show", "speaking", "attop"); $("#tourbar").style.left = ""; $("#spot").style.display = "none";
   if (!sim) $("#idle").style.display = "grid";
 }
 function stopVoice(){
@@ -1153,9 +1154,19 @@ function placeSpot(){
   if (!tour.on) return;
   const st = tour.steps[tour.i], sp = $("#spot");
   const el = st && st.sel ? document.querySelector(st.sel) : null;
-  if (!el){ Object.assign(sp.style, {left: "50%", top: "40%", width: "0px", height: "0px"}); return; }
+  const tb = $("#tourbar");
+  if (!el){ Object.assign(sp.style, {left: "50%", top: "40%", width: "0px", height: "0px"}); tb.classList.remove("attop"); return; }
   const r = el.getBoundingClientRect(), pad = 8;
   Object.assign(sp.style, {left: (r.left - pad) + "px", top: (r.top - pad) + "px", width: (r.width + pad*2) + "px", height: (r.height + pad*2) + "px"});
+  // keep the subtitles off the highlighted part: bottom by default, top when it would cover it
+  const h = tb.offsetHeight, below = innerHeight - 22 - h, above = 72 + h;
+  const coversBottom = r.bottom + pad > below - 6 && r.top - pad < innerHeight - 22;
+  const coversTop = r.top - pad < above + 6;
+  const tall = coversBottom && coversTop;           // e.g. the settings column: no room above or below
+  tb.classList.toggle("attop", coversBottom && !tall);
+  const w = tb.offsetWidth, room = innerWidth - (r.right + pad);
+  tb.style.left = tall && room > w + 32 ? (r.right + pad + 16 + w / 2) + "px"
+                : tall && r.left - pad > w + 32 ? (r.left - pad - 16 - w / 2) + "px" : "";
 }
 setInterval(placeSpot, 250);
 window.addEventListener("resize", placeSpot); window.addEventListener("scroll", placeSpot, {passive:true});
