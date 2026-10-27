@@ -581,6 +581,7 @@ const CODE = () => ({
       ["}", ""]],
 });
 let flashes = [];   // {side, who, until}
+let keyHolder = null;   // {who, kind, until}: last thread inside the critical section
 
 /* ---------- small svg builders ---------- */
 function itemSVG(n, cls){ return envSVG(n, cls); }
@@ -758,7 +759,7 @@ function toast(msg, err){
 let run = -1, seq = 0, sim = null, layoutKey = "", hist = [], pendingIn = {}, logCount = 0, lastEventAt = 0;
 
 function resetView(){
-  layoutKey = ""; hist = []; pendingIn = {}; logCount = 0; flashes = [];
+  layoutKey = ""; hist = []; pendingIn = {}; logCount = 0; flashes = []; keyHolder = null;
   $("#log").innerHTML = `<li class="empty">Одоохондоо юу ч болоогүй байна.</li>`;
   $("#result").className = "result"; $("#result").textContent = "";
   $("#fly").innerHTML = "";
@@ -840,11 +841,16 @@ function render(d){
   const n = s.slots.length;
   setMetric("#mEmpty", "#vEmpty", "#dEmpty", s.empty, n);
   setMetric("#mFull", "#vFull", "#dFull", s.full, n);
-  $("#mMutex").classList.toggle("locked", s.mutex_locked);
-  $("#mMutex").style.color = s.mutex_locked ? "var(--red)" : "var(--green)";
-  $("#shackle").setAttribute("d", s.mutex_locked ? "M15 22v-6a9 9 0 0 1 18 0v6" : "M15 22v-6a9 9 0 0 1 18 0v-3");
-  $("#shackle").setAttribute("transform", s.mutex_locked ? "" : "translate(0 -4)");
-  $("#lockTxt").textContent = s.mutex_locked ? T.lockBusy : "Чөлөөтэй";
+  // the real lock is held only for microseconds, so show its last holder for a moment
+  const kh = keyHolder && keyHolder.until > performance.now() && !s.stopped ? keyHolder : null;
+  const locked = s.mutex_locked || !!kh;
+  $("#mMutex").classList.toggle("locked", locked);
+  $("#mMutex").style.color = locked ? "var(--red)" : "var(--green)";
+  $("#shackle").setAttribute("d", locked ? "M15 22v-6a9 9 0 0 1 18 0v6" : "M15 22v-6a9 9 0 0 1 18 0v-3");
+  $("#shackle").setAttribute("transform", locked ? "" : "translate(0 -4)");
+  $("#lockTxt").innerHTML = kh
+    ? `🔑 <b>${kh.who}</b> түлхүүртэй: ${T.item} ${kh.kind === "insert" ? "хийж" : "авч"} байна`
+    : (locked ? T.lockBusy : "Чөлөөтэй");
 
   // stats + chart
   $("#sProd").textContent = s.produced; $("#sCons").textContent = s.consumed;
@@ -921,6 +927,7 @@ function handleEvent(e){
   lastEventAt = performance.now();
   const ins = e.kind === "insert";
   flashes.push({side: ins ? "P" : "C", who: e.who, until: performance.now() + 700});
+  keyHolder = {who: e.who, kind: e.kind, until: performance.now() + Math.max(450, flyMs())};
   $("#narr").innerHTML = ins
     ? `${T.prod} <b>${e.who}</b> <b>${e.item}</b> дугаартай ${T.itemAcc} <b>${e.slot}-р</b> ${T.slotDat} ${T.put}.`
     : `${T.cons} <b>${e.who}</b> <b>${e.slot}-р</b> ${T.slotAbl} <b>${e.item}</b> дугаартай ${T.itemAcc} авлаа.`;
