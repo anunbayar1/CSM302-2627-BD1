@@ -435,7 +435,7 @@ function clearView(){
   $("#sEmpty").classList.remove("zero"); $("#sFull").classList.remove("zero");
   $("#vMutex").textContent = "free"; $("#sMutex").style.color = "var(--green)"; $("#mWait").innerHTML = "";
   $("#check").textContent = "—"; $("#check").className = "check"; $("#last").textContent = "";
-  $("#sMutex").classList.remove("off"); $("#race").classList.remove("on");
+  $("#sMutex").classList.remove("off"); $("#race").classList.remove("on"); $("#dl").classList.remove("on");
 }
 
 function render(s){
@@ -451,6 +451,7 @@ function render(s){
   if (!s){
     pill.className = "pill"; pill.textContent = "ready"; $("#clock").textContent = "0.00 s";
     if (nKey) clearView();
+    $("#dl").classList.remove("on");
     return;
   }
   if (nKey !== s.slots.length + "|" + Object.keys(s.states).join(",")) build(s);
