@@ -334,9 +334,11 @@ td code{font-size:12px}
   .speedbox{margin-top:10px;padding-top:10px}
   .stage{min-height:0;display:grid;gap:10px;
     grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
-    grid-template-rows:auto minmax(0,1.25fr) auto minmax(0,1fr);
+    grid-template-rows:64px minmax(0,1.25fr) 140px minmax(0,1fr);
     grid-template-areas:"narr narr" "scene scene" "metrics metrics" "code log"}
-  .narr{grid-area:narr;padding:9px 14px;gap:10px}
+  .narr{grid-area:narr;padding:9px 14px;gap:10px;overflow:hidden;min-width:0}
+  .narr > div:last-child{min-width:0}
+  .narr-main,.narr-hint{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .narr-ic{width:32px;height:32px}
   .narr-main{font-size:15.5px;min-height:22px}
   .narr-hint{font-size:12.5px;min-height:17px}
@@ -350,7 +352,9 @@ td code{font-size:12px}
   .boxwrap{justify-content:center;min-height:0}
   .slot{height:clamp(40px,7vh,64px)}
   .wrapnote{font-size:11.5px;margin-top:3px}
-  .metrics{grid-area:metrics;gap:10px}
+  .metrics{grid-area:metrics;gap:10px;min-height:0;height:100%}
+  .metrics > *{min-height:0;overflow:hidden}
+  #lockTxt{font-size:13px;line-height:1.3;height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .metric,.chart{padding:9px 12px}
   .mval{font-size:26px;margin:2px 0 4px}
   .dots i{width:8px;height:8px}
@@ -383,6 +387,7 @@ td code{font-size:12px}
   .top-right{gap:8px}
 }
 @media (min-width:1100px) and (min-height:620px) and (max-height:820px){
+  .stage{grid-template-rows:64px minmax(0,1.25fr) 128px minmax(0,1fr)}
   .codeleg{display:none}
   .chart svg{height:34px}
   .metric .mrule{display:none}
@@ -405,7 +410,7 @@ td code{font-size:12px}
     <span id="chip" class="chip">Хаалттай</span>
     <span id="clock" class="clock">0.0 с</span>
     <span id="speedTag" class="speedtag" title="Хурд">1×</span>
-    <span id="engineTag" class="enginetag" title="Дэлгэцэн дээрх thread-үүдийг ажиллуулж буй програм" hidden></span>
+    <span id="engineTag" class="enginetag" title="Дэлгэц дээрх thread-үүдийг ажиллуулж буй программ" hidden></span>
     <button id="tourBtn" class="btn tour">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
       Дуут тайлбар
@@ -428,7 +433,7 @@ td code{font-size:12px}
       <div style="font-size:13px;font-weight:600;margin:4px 0 6px">Бэлэн жишээ</div>
       <div id="presets" class="presets"></div>
       <label class="switch">
-        <span>Алхам алхмаар<small>«Нэг алхам» дарах бүрт урагшилна</small></span>
+        <span>Алхам алхмаар<small>«Нэг алхам» дарах бүрд урагшилна</small></span>
         <span class="toggle"><input id="stepMode" type="checkbox"><span></span></span>
       </label>
     </section>
@@ -872,7 +877,8 @@ function render(d){
   const s = d.sim;
   sim = s;
   const chip = $("#chip");
-  $("#idle").style.display = s ? "none" : "grid";
+  $("#idle").style.display = s || tour.on ? "none" : "grid";
+  if (!s && tour.on) previewLayout();     // tour before Start: show the people and the empty box
   if (!s){
     chip.className = "chip"; chip.textContent = "Хаалттай"; $("#clock").textContent = "0.0 с";
     renderCode(null); renderQueues(null);
@@ -1109,6 +1115,19 @@ function pickMnVoice(){
   return vs.find(v => /^mn/i.test(v.lang)) || vs.find(v => /mongol/i.test(v.name)) || null;
 }
 if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => { tour.mnVoice = pickMnVoice(); };
+function previewLayout(){
+  const v = readValues(), n = Math.max(1, Math.min(20, parseInt(v.size, 10) || 5));
+  const p = Math.max(1, Math.min(10, parseInt(v.prod, 10) || 2)), c = Math.max(1, Math.min(10, parseInt(v.cons, 10) || 2));
+  const states = {};
+  for (let i = 1; i <= p; i++) states["P" + i] = "idle";
+  for (let i = 1; i <= c; i++) states["C" + i] = "idle";
+  const fake = {slots: Array(n).fill(null), states, in_idx: 0, out_idx: 0, last: null};
+  if (layoutKey !== n + "|" + Object.keys(states).join(",")){
+    buildLayout(fake);
+    document.querySelectorAll("#outRow .ptr").forEach((el, i) => el.classList.toggle("on", i === 0));
+    document.querySelectorAll("#inRow .ptr").forEach((el, i) => el.classList.toggle("on", i === 0));
+  }
+}
 async function startTour(){
   const data = await loadTourData();
   if (!data){ toast("tour.json уншиж чадсангүй.", true); return; }
@@ -1116,6 +1135,7 @@ async function startTour(){
   tour.mnVoice = pickMnVoice();
   tour.on = true; tour.i = 0; tour.paused = false;
   if (dlg.open) dlg.close();
+  if (!sim){ $("#idle").style.display = "none"; previewLayout(); }
   $("#tourbar").classList.add("show"); $("#spot").style.display = "block";
   playStep();
 }
@@ -1123,6 +1143,7 @@ function stopTour(){
   tour.on = false; tour.token++;
   stopVoice();
   $("#tourbar").classList.remove("show", "speaking"); $("#spot").style.display = "none";
+  if (!sim) $("#idle").style.display = "grid";
 }
 function stopVoice(){
   if (tour.audio){ tour.audio.pause(); tour.audio = null; }
@@ -1186,7 +1207,7 @@ function speak(st, i, my){
   return new Promise(resolve => {
     const done = () => resolve();
     if (m && m.text === say){                                  // 1) pre-generated neural voice
-      $("#tbSrc").textContent = "Дуу: Yesui (AI, mp3)";
+      $("#tbSrc").textContent = "Дуу: Yesui (AI, MP3)";
       const a = new Audio("/voice/" + file); tour.audio = a;
       a.onended = done; a.onerror = () => { tour.audio = null; viaSpeech(); };
       a.play().catch(() => viaSpeech());

@@ -71,7 +71,7 @@ def build_c_engine():
         raise RuntimeError("gcc/make олдсонгүй (sudo apt install build-essential)")
     r = subprocess.run(["make", "-s"], cwd=C_DIR, capture_output=True, text=True)
     if r.returncode != 0 or not os.path.isfile(C_BIN):
-        raise RuntimeError("C програмыг хөрвүүлж чадсангүй:\n" + r.stderr.strip())
+        raise RuntimeError("C программыг хөрвүүлж чадсангүй:\n" + r.stderr.strip())
     return C_BIN
 
 

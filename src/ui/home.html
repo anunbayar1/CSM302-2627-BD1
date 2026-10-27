@@ -62,9 +62,9 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:18px}
       </svg>
       <span class="badge py">Python · жишээтэй</span>
       <h2>Шуудангийн хайрцаг</h2>
-      <p>Илгээгч, хүлээн авагч, шуудангийн хайрцгийн жишээгээр хөдөлгөөнтэй, ойлгомжтой тайлбарлана.</p>
+      <p>Шуудан зөөгч, хүлээн авагч, шуудангийн хайрцгийн жишээгээр хөдөлгөөнтэй, ойлгомжтой тайлбарлана.</p>
       <ul>
-        <li>Монгол дуут тайлбар (16 алхам)</li>
+        <li>Монгол дуут тайлбар</li>
         <li>Код дээр thread бүр аль мөрөнд байгааг харуулна</li>
         <li>Хурдыг ажиллаж байх үед өөрчилнө</li>
       </ul>
@@ -89,12 +89,12 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:18px}
       </svg>
       <span class="badge c">C · Pthreads · src/c</span>
       <h2>Шууд ажиллагаа</h2>
-      <p>Номын Programming Project-ийн C програм яг юу хийж байгааг жишээгүйгээр, энгийн хэлбэрээр харуулна.</p>
+      <p>Номын Programming Project-ийн C программ яг юу хийж байгааг жишээгүйгээр, энгийн хэлбэрээр харуулна.</p>
       <div class="warn" id="cwarn"></div>
       <ul>
         <li>Буфер, <code>in</code> / <code>out</code> заагч</li>
         <li><code>empty</code>, <code>full</code>, <code>mutex</code>-ийн бодит утга</li>
-        <li>Thread бүрийн төлөв, програмын өөрийн лог</li>
+        <li>Thread бүрийн төлөв, программын өөрийн лог</li>
       </ul>
       <span class="go">Нээх →</span>
     </a>
@@ -108,7 +108,7 @@ fetch("/api/c/state", {cache: "no-store"}).then(async r => {
   if (r.status === 503){
     const d = await r.json().catch(() => ({}));
     const w = document.getElementById("cwarn");
-    w.textContent = "Одоогоор ажиллахгүй: " + (d.error || "C програм бэлэн биш");
+    w.textContent = "Одоогоор ажиллахгүй: " + (d.error || "C программ бэлэн биш");
     w.style.display = "block";
   }
 }).catch(() => {});
