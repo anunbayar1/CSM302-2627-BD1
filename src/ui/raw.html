@@ -69,7 +69,26 @@ pre{margin:0;background:var(--term);color:var(--term-ink);border-radius:8px;padd
 pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
 .logbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .logbar label{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
-@media (max-width:900px){.grid{grid-template-columns:1fr}.status{margin-left:0}}
+.intro{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:2px}
+.intro div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px}
+.intro b{display:block;margin-bottom:2px}
+.introbar{display:flex;justify-content:space-between;align-items:center}
+.introbar button{padding:3px 9px;font-size:12.5px}
+.hint{font-size:11.5px;color:var(--muted);font-weight:400}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;margin:0 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.lastact{margin:10px 0 0;padding:8px 10px;border-radius:7px;background:var(--bg);border:1px solid var(--line);font-size:13.5px;min-height:38px}
+.lastact b{font-family:ui-monospace,monospace}
+.cell.fin{animation:fin .7s ease-out} .cell.fout{animation:fout .7s ease-out}
+@keyframes fin{0%{box-shadow:0 0 0 4px #22c55e;transform:scale(1.06)}100%{box-shadow:0 0 0 0 transparent;transform:none}}
+@keyframes fout{0%{box-shadow:0 0 0 4px #3b82f6;transform:scale(.94)}100%{box-shadow:0 0 0 0 transparent;transform:none}}
+.logtools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.logtools .n{font-size:12.5px;color:var(--muted);margin-right:4px}
+.logtools button{padding:5px 10px;font-size:12.5px}
+td.ex{font-size:13px;color:var(--muted)}
+tr.waiting td.ex{color:var(--amber);font-weight:600}
+@media (max-width:900px){.grid,.intro{grid-template-columns:1fr}.status{margin-left:0}}
 </style>
 </head>
 <body>
@@ -85,15 +104,24 @@ pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
 </header>
 
 <main>
+  <section id="introSec">
+    <div class="introbar"><h2 style="margin:0">Энэ хуудас юу харуулж байна?</h2><button id="introHide">Ойлголоо ×</button></div>
+    <div class="intro" style="margin-top:10px">
+      <div><b>1. Thread-үүд</b>Producer thread тоо үүсгээд буферт хийнэ, consumer thread буферээс авна. Бүгд зэрэг, өөр өөрийн хурдаар ажиллана.</div>
+      <div><b>2. Хамгаалалт</b><code>empty</code> = сул нүд, <code>full</code> = дүүрсэн нүд. 0 болбол тухайн thread хүлээнэ. <code>mutex</code> нь нэг удаад нэг л thread-ийг буфер рүү оруулна.</div>
+      <div><b>3. Нотолгоо</b>Доорх лог бол C програмын өөрийн хэвлэлт. Зогсоход «produced − consumed = буферт үлдсэн» таарвал нэг ч item алга болоогүй гэсэн үг.</div>
+    </div>
+  </section>
+
   <section>
     <h2>Параметр</h2>
     <div class="controls">
-      <label>BUFFER_SIZE (1–20)<input id="size" type="number" min="1" max="20" value="5"></label>
-      <label>producers (1–10)<input id="prod" type="number" min="1" max="10" value="2"></label>
-      <label>consumers (1–10)<input id="cons" type="number" min="1" max="10" value="2"></label>
-      <label>producer max sleep, с<input id="psleep" type="number" min="0" max="10" step="0.1" value="1"></label>
-      <label>consumer max sleep, с<input id="csleep" type="number" min="0" max="10" step="0.1" value="1"></label>
-      <label>хурд<select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+      <label>BUFFER_SIZE (1–20)<span class="hint">буферийн нүдний тоо</span><input id="size" type="number" min="1" max="20" value="5"></label>
+      <label>producers (1–10)<span class="hint">хийдэг thread</span><input id="prod" type="number" min="1" max="10" value="2"></label>
+      <label>consumers (1–10)<span class="hint">авдаг thread</span><input id="cons" type="number" min="1" max="10" value="2"></label>
+      <label>producer max sleep, с<span class="hint">бага бол хурдан хийнэ</span><input id="psleep" type="number" min="0" max="10" step="0.1" value="1"></label>
+      <label>consumer max sleep, с<span class="hint">бага бол хурдан авна</span><input id="csleep" type="number" min="0" max="10" step="0.1" value="1"></label>
+      <label>хурд<span class="hint">ажиллаж байхад ч болно</span><select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
       <label class="chk"><input id="paused" type="checkbox">алхмаар эхлэх</label>
       <div class="btns">
         <button id="bStart" class="primary">Start</button>
@@ -114,6 +142,7 @@ pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
       <div class="buf" id="idxRow"></div>
       <div class="buf" id="inRow"></div>
       <div class="decl mono" id="decl">buffer_item buffer[BUFFER_SIZE];  in = 0, out = 0</div>
+      <div class="lastact" id="lastAct">Сүүлийн үйлдэл: —</div>
     </section>
 
     <section>
@@ -136,14 +165,30 @@ pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
 
   <section>
     <h2>Thread-үүд</h2>
+    <div class="legend">
+      <span><i style="background:var(--muted)"></i>sleeping · амарч байна</span>
+      <span><i style="background:var(--green)"></i>producing · item үүсгэж байна</span>
+      <span><i style="background:var(--amber)"></i>waiting · хүлээж байна</span>
+      <span><i style="background:var(--blue)"></i>consuming · item ашиглаж байна</span>
+      <span><i style="background:var(--violet)"></i>paused · Step хүлээж байна</span>
+    </div>
     <table class="threads">
-      <thead><tr><th>thread</th><th>төлөв</th><th>одоо хийж буй үйлдэл</th></tr></thead>
-      <tbody id="threads"><tr><td colspan="3" style="color:var(--muted)">Start дарна уу.</td></tr></tbody>
+      <thead><tr><th>thread</th><th>төлөв</th><th>кодын мөр</th><th>энгийнээр</th></tr></thead>
+      <tbody id="threads"><tr><td colspan="4" style="color:var(--muted)">Start дарна уу.</td></tr></tbody>
     </table>
   </section>
 
   <section>
-    <div class="logbar"><h2 style="margin:0">Програмын лог</h2><label><input type="checkbox" id="follow" checked> доош гүйлгэх</label></div>
+    <div class="logbar">
+      <h2 style="margin:0">Програмын лог <span class="hint">(C програмын хэвлэлт)</span></h2>
+      <div class="logtools">
+        <span class="n" id="logN">0 мөр</span>
+        <label><input type="checkbox" id="follow" checked> доош гүйлгэх</label>
+        <button id="dlTxt" title="Терминалын хэвлэлттэй ижил текст файл">⬇ .txt татах</button>
+        <button id="dlCsv" title="Excel-д нээгдэх хүснэгт">⬇ .csv татах</button>
+        <button id="clrLog">Цэвэрлэх</button>
+      </div>
+    </div>
     <pre id="log"></pre>
   </section>
 </main>
@@ -152,33 +197,71 @@ pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
 "use strict";
 const API = "/api/c";
 const $ = s => document.querySelector(s);
-const WHERE = {
-  P: {sleeping: "nanosleep(random)", producing: "item = rand() … (бэлдэж байна)", paused: "Step хүлээж байна",
-      wsem: "sem_wait(&empty)  ← буфер дүүрэн", lock: "pthread_mutex_lock(&mutex)", stopped: "pthread_exit", idle: "—"},
-  C: {sleeping: "nanosleep(random)", consuming: "item ашиглаж байна", paused: "Step хүлээж байна",
-      wsem: "sem_wait(&full)  ← буфер хоосон", lock: "pthread_mutex_lock(&mutex)", stopped: "pthread_exit", idle: "—"},
+const ST_MN = {sleeping: "амарч байна", producing: "item үүсгэж байна", waiting: "хүлээж байна",
+  consuming: "item ашиглаж байна", paused: "түр зогссон", stopped: "дууссан", idle: "эхлээгүй"};
+const WHERE = {   // [code line, plain explanation]
+  P: {sleeping: ["nanosleep(random)", "дараагийн item хийхээсээ өмнө амарч байна"],
+      producing: ["item = rand()", "шинэ тоо үүсгэж байна"],
+      paused: ["(Step)", "Step товч дарахыг хүлээж байна"],
+      wsem: ["sem_wait(&empty)", "буфер дүүрэн → сул нүд гартал хүлээнэ"],
+      lock: ["pthread_mutex_lock(&mutex)", "өөр thread буфер дотор байна → ээлж хүлээнэ"],
+      stopped: ["pthread_exit", "ажлаа дуусгасан"], idle: ["—", "эхлээгүй"]},
+  C: {sleeping: ["nanosleep(random)", "дараагийн item авахаасаа өмнө амарч байна"],
+      consuming: ["(item ашиглах)", "авсан тоогоо ашиглаж байна"],
+      paused: ["(Step)", "Step товч дарахыг хүлээж байна"],
+      wsem: ["sem_wait(&full)", "буфер хоосон → item ирэхийг хүлээнэ"],
+      lock: ["pthread_mutex_lock(&mutex)", "өөр thread буфер дотор байна → ээлж хүлээнэ"],
+      stopped: ["pthread_exit", "ажлаа дуусгасан"], idle: ["—", "эхлээгүй"]},
 };
-let run = -1, seq = 0, sim = null, nKey = "", logLines = [];
+let fullLog = [], csvRows = [], runInfo = null;
+let run = -1, seq = 0, sim = null, nKey = "", logLines = [], summarized = false;
 
-function fmtLog(e){
+function plainLine(e){
   const t = e.t.toFixed(3).padStart(7, " ");
   const who = e.who.padEnd(3, " ");
   const it = String(e.item).padStart(2, " ");
   const tail = e.count === null || e.count === undefined ? "" : `   (buffer ${e.count}/${sim ? sim.slots.length : "?"})`;
   return e.kind === "insert"
-    ? `[${t}s] <span class="p">producer ${who}</span> produced ${it} -> slot ${e.slot}${tail}`
-    : `[${t}s] <span class="c">consumer ${who}</span> consumed ${it} <- slot ${e.slot}${tail}`;
+    ? `[${t}s] producer ${who} produced ${it} -> slot ${e.slot}${tail}`
+    : `[${t}s] consumer ${who} consumed ${it} <- slot ${e.slot}${tail}`;
 }
-function addLog(html){
+function htmlLine(plain){
+  return plain.replace(/(producer \S+)/, '<span class="p">$1</span>').replace(/(consumer \S+)/, '<span class="c">$1</span>');
+}
+function addLog(html, plain){
   logLines.push(html);
   if (logLines.length > 600) logLines.splice(0, logLines.length - 600);
+  if (plain !== undefined){ fullLog.push(plain); if (fullLog.length > 200000) fullLog.shift(); }
+}
+function onEvent(e){
+  const plain = plainLine(e);
+  addLog(htmlLine(plain), plain);
+  const n = sim ? sim.slots.length : "";
+  csvRows.push([e.t.toFixed(3), e.who, e.kind === "insert" ? "producer" : "consumer",
+                e.kind === "insert" ? "insert_item" : "remove_item", e.item, e.slot, e.count ?? "", n].join(","));
+  if (csvRows.length > 200000) csvRows.shift();
+  const cell = document.querySelectorAll("#cells .cell")[e.slot];
+  if (cell){ cell.classList.remove("fin", "fout"); void cell.offsetWidth; cell.classList.add(e.kind === "insert" ? "fin" : "fout"); }
+  $("#lastAct").innerHTML = e.kind === "insert"
+    ? `Сүүлийн үйлдэл: <b>${e.who}</b> → <b>${e.item}</b>-г <b>buffer[${e.slot}]</b>-д хийлээ <span class="hint">insert_item(), дараа нь sem_post(&amp;full)</span>`
+    : `Сүүлийн үйлдэл: <b>${e.who}</b> ← <b>buffer[${e.slot}]</b>-аас <b>${e.item}</b>-г авлаа <span class="hint">remove_item(), дараа нь sem_post(&amp;empty)</span>`;
 }
 function flushLog(){
   const pre = $("#log");
   pre.innerHTML = logLines.join("\n");
   if ($("#follow").checked) pre.scrollTop = pre.scrollHeight;
+  $("#logN").textContent = fullLog.length + " мөр";
 }
-
+function stamp(){
+  const d = new Date(), z = x => String(x).padStart(2, "0");
+  return `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`;
+}
+function download(name, text, type){
+  const url = URL.createObjectURL(new Blob([text], {type}));
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 function build(s){
   const n = s.slots.length, cols = `repeat(${n}, minmax(0,1fr))`;
   for (const id of ["#outRow", "#cells", "#idxRow", "#inRow"]) $(id).style.gridTemplateColumns = cols;
@@ -187,7 +270,7 @@ function build(s){
   $("#outRow").innerHTML = s.slots.map(() => `<div class="ptr out"></div>`).join("");
   $("#inRow").innerHTML = s.slots.map(() => `<div class="ptr in"></div>`).join("");
   $("#threads").innerHTML = Object.keys(s.states).map(k =>
-    `<tr data-k="${k}"><td class="m"><b>${k}</b> <span style="color:var(--muted)">${k[0] === "P" ? "producer" : "consumer"}</span></td><td class="st"></td><td class="m"></td></tr>`).join("");
+    `<tr data-k="${k}"><td class="m"><b>${k}</b> <span style="color:var(--muted)">${k[0] === "P" ? "producer" : "consumer"}</span></td><td class="st"></td><td class="m"></td><td class="ex"></td></tr>`).join("");
   nKey = n + "|" + Object.keys(s.states).join(",");
 }
 
@@ -237,12 +320,13 @@ function render(s){
 
   document.querySelectorAll("#threads tr").forEach(tr => {
     const k = tr.dataset.k, st = s.states[k] || "idle", side = k[0];
-    let where = WHERE[side][st] || "";
+    let where = WHERE[side][st] || ["", ""];
     if (st === "waiting") where = (side === "P" ? s.empty : s.full) === 0 ? WHERE[side].wsem : WHERE[side].lock;
     tr.className = st === "waiting" ? "waiting" : "";
-    const stc = tr.children[1], wc = tr.children[2];
-    stc.className = "st " + st; stc.textContent = st;
-    wc.textContent = where;
+    const stc = tr.children[1];
+    stc.className = "st " + st; stc.textContent = `${st} · ${ST_MN[st] || ""}`;
+    tr.children[2].textContent = where[0];
+    tr.children[3].textContent = where[1];
   });
 }
 
@@ -251,13 +335,21 @@ async function poll(){
     const r = await fetch(API + "/state?since=" + seq, {cache: "no-store"});
     const d = await r.json();
     if (r.status === 503){ showErr("C програм ажиллахгүй байна: " + d.error); setTimeout(poll, 2000); return; }
-    if (d.run !== run){ run = d.run; logLines = []; nKey = ""; sim = null; }
-    if (d.sim && !sim) addLog(`<span class="h">$ ./producer_consumer --ui ${d.sim.slots.length} ${d.config ? d.config.prod + " " + d.config.cons + " " + d.config.psleep + " " + d.config.csleep : ""}</span>`);
+    if (d.run !== run){ run = d.run; logLines = []; fullLog = []; csvRows = []; nKey = ""; sim = null; runInfo = null; summarized = false;
+      $("#lastAct").textContent = "Сүүлийн үйлдэл: —"; }
+    if (d.sim && !sim){
+      const c = d.config || {};
+      runInfo = {when: new Date().toLocaleString(), size: d.sim.slots.length, prod: c.prod, cons: c.cons, psleep: c.psleep, csleep: c.csleep};
+      const cmd = `$ ./producer_consumer --ui ${runInfo.size} ${c.prod} ${c.cons} ${c.psleep} ${c.csleep} ${d.sim.speed} ${d.sim.paused ? 1 : 0}`;
+      addLog(`<span class="h">${cmd}</span>`, cmd);
+    }
     sim = d.sim;
-    for (const e of d.events) addLog(fmtLog(e));
-    if (d.sim && d.sim.stopped && !logLines.some(l => l.includes("CONSISTENT"))){
+    for (const e of d.events) onEvent(e);
+    if (d.sim && d.sim.stopped && !summarized){
+      summarized = true;
       const c = d.sim.slots.filter(x => x !== null).length, ok = d.sim.produced - d.sim.consumed === c;
-      addLog(`\n<span class="h">produced=${d.sim.produced} consumed=${d.sim.consumed} in_buffer=${c} -> ${ok ? "CONSISTENT" : "INCONSISTENT"}</span>`);
+      const line = `produced=${d.sim.produced} consumed=${d.sim.consumed} in_buffer=${c} -> ${ok ? "CONSISTENT" : "INCONSISTENT"}`;
+      addLog(`\n<span class="h">${line}</span>`, "\n" + line);
     }
     if (d.events.length || d.sim) flushLog();
     seq = d.seq;
@@ -281,7 +373,24 @@ $("#bStart").onclick = () => api("start", {size: val("#size"), prod: val("#prod"
 $("#bPause").onclick = () => api(sim && sim.paused ? "resume" : "pause");
 $("#bStep").onclick = () => api("step");
 $("#bStop").onclick = () => api("stop");
-$("#bReset").onclick = async () => { if (await api("reset")){ logLines = []; flushLog(); } };
+$("#bReset").onclick = async () => { if (await api("reset")){ logLines = []; fullLog = []; csvRows = []; flushLog(); } };
+$("#clrLog").onclick = () => { logLines = []; fullLog = []; csvRows = []; flushLog(); };
+$("#dlTxt").onclick = () => {
+  if (!fullLog.length) return showErr("Лог хоосон байна. Эхлээд Start дарна уу.");
+  const i = runInfo || {};
+  const head = ["# Producer–Consumer · C / Pthreads (src/c/producer_consumer)",
+    `# огноо: ${i.when || new Date().toLocaleString()}`,
+    `# BUFFER_SIZE=${i.size ?? "?"} producers=${i.prod ?? "?"} consumers=${i.cons ?? "?"} producer_sleep=${i.psleep ?? "?"}s consumer_sleep=${i.csleep ?? "?"}s`,
+    ""];
+  download(`pc_log_${stamp()}.txt`, head.concat(fullLog).join("\n") + "\n", "text/plain;charset=utf-8");
+};
+$("#dlCsv").onclick = () => {
+  if (!csvRows.length) return showErr("Лог хоосон байна. Эхлээд Start дарна уу.");
+  const head = "time_s,thread,role,action,item,slot,buffer_count,buffer_size";
+  download(`pc_log_${stamp()}.csv`, "\ufeff" + head + "\n" + csvRows.join("\n") + "\n", "text/csv;charset=utf-8");
+};
+try { if (localStorage.getItem("raw-intro") === "hide") $("#introSec").style.display = "none"; } catch(e){}
+$("#introHide").onclick = () => { $("#introSec").style.display = "none"; try { localStorage.setItem("raw-intro", "hide"); } catch(e){} };
 let tuneT;
 for (const id of ["#psleep", "#csleep", "#speed"]) $(id).addEventListener("input", () => {
   if (!sim || sim.stopped) return;
