@@ -107,10 +107,6 @@ main{flex:1;min-height:0;display:grid;gap:12px;padding:12px 20px 16px;
 .bufhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .bufhead code{font-size:12px;color:var(--muted)}
 .buf{display:grid;gap:6px}
-.ptr{text-align:center;height:20px}
-.ptr span{display:none;font:700 11px ui-monospace,monospace;padding:2px 7px;border-radius:999px}
-.ptr.on span{display:inline-block}
-.ptr.out span{background:var(--blue-soft);color:var(--blue)} .ptr.in span{background:var(--green-soft);color:var(--green)}
 .cell{height:clamp(40px,10vh,120px);border-radius:10px;border:2px dashed var(--line);background:var(--card);display:grid;place-items:center;font:800 clamp(15px,2.6vh,28px) ui-monospace,monospace;color:var(--muted);transition:background .2s,border-color .2s}
 .cell.full{border:2px solid var(--amber);background:var(--amber-soft);color:var(--ink)}
 .cell.fin{animation:fin .55s ease-out} .cell.fout{animation:fout .55s ease-out}
@@ -158,6 +154,23 @@ main{flex:1;min-height:0;display:grid;gap:12px;padding:12px 20px 16px;
 .dl small{display:block;font:700 15px ui-monospace,monospace;margin-top:6px}
 .last .bad{color:var(--red)}
 pre .x{color:#fca5a5;font-weight:700}
+/* flying items: how insert_item / remove_item move the data */
+.tok{position:fixed;left:0;top:0;width:46px;height:38px;margin:-19px 0 0 -23px;border-radius:10px;display:grid;place-items:center;
+     font:800 17px ui-monospace,monospace;z-index:50;pointer-events:none;box-shadow:0 6px 16px rgba(0,0,0,.25);will-change:transform}
+.tok.p{background:var(--amber-soft);border:2px solid var(--green);color:var(--ink)}
+.tok.c{background:var(--amber-soft);border:2px solid var(--blue);color:var(--ink)}
+.tok.bad{background:var(--red-soft);border:2px solid var(--red);color:var(--red)}
+.tok.lost{background:var(--card);border:2px dashed var(--red);color:var(--red);text-decoration:line-through}
+.cell.wait{border-color:var(--green);border-style:dashed;animation:land .5s ease-in-out infinite alternate}
+@keyframes land{to{box-shadow:0 0 0 4px var(--green-soft)}}
+#outRow,#inRow{display:block!important;position:relative;height:22px}
+.mk{position:absolute;top:1px;transform:translateX(-50%);transition:left .45s cubic-bezier(.4,0,.2,1);white-space:nowrap}
+.mk span{display:inline-block;font:700 11px ui-monospace,monospace;padding:2px 8px;border-radius:999px}
+.mk.out span{background:var(--blue-soft);color:var(--blue)} .mk.in span{background:var(--green-soft);color:var(--green)}
+.mk.bump span{animation:bump .45s ease-out}
+@keyframes bump{40%{transform:scale(1.25)}}
+.th code.step{color:var(--ink);font-weight:700}
+
 
 /* ---------- log ---------- */
 .logc{display:flex;flex-direction:column;min-height:0;padding:10px 14px 12px}
@@ -304,6 +317,68 @@ function flushLog(){
   $("#logN").textContent = fullLog.length + " lines";
 }
 function flash(el, cls){ if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+/* ---------- animation: the item travels producer → buffer[in] → consumer ---------- */
+let flying = 0;
+function centerOf(el, side){
+  const r = el.getBoundingClientRect();
+  return [side === "r" ? r.right - 26 : side === "l" ? r.left + 26 : r.left + r.width / 2, r.top + r.height / 2];
+}
+function fly(text, cls, from, to, ms, done){
+  if (document.hidden){ done && done(); return; }
+  flying++;
+  const t = document.createElement("div");
+  t.className = "tok " + cls; t.textContent = text; document.body.appendChild(t);
+  const [x0, y0] = from, [x1, y1] = to, mx = (x0 + x1) / 2, my = Math.min(y0, y1) - 46;
+  const a = t.animate([
+    {transform: `translate(${x0}px,${y0}px) scale(.6)`, opacity: 0},
+    {transform: `translate(${mx}px,${my}px) scale(1.12)`, opacity: 1, offset: .5},
+    {transform: `translate(${x1}px,${y1}px) scale(1)`, opacity: 1}], {duration: ms, easing: "cubic-bezier(.45,0,.25,1)"});
+  a.onfinish = () => { t.remove(); flying--; done && done(); };
+}
+function dropLost(text, at){                     // an overwritten item falls out of the buffer
+  const t = document.createElement("div");
+  t.className = "tok lost"; t.textContent = text; document.body.appendChild(t);
+  const [x, y] = at;
+  t.animate([{transform: `translate(${x}px,${y}px)`, opacity: 1},
+             {transform: `translate(${x + 30}px,${y + 90}px) rotate(25deg)`, opacity: 0}], {duration: 900, easing: "ease-in"})
+   .onfinish = () => t.remove();
+}
+/* Events arrive in batches (one poll = 100 ms), so an item can be put in and taken out in the
+   same batch. Each slot therefore plays its steps one after another: first the item lands,
+   then it leaves. While a slot is animating, the animation (not the snapshot) draws it. */
+function setCell(cell, v){ cell.textContent = v === null ? "" : v; cell.classList.toggle("full", v !== null); }
+function raceMark(cell){ flash(cell, "race"); clearTimeout(cell._rt); cell._rt = setTimeout(() => cell.classList.remove("race"), 2500); }
+function animateEvent(e, cell){
+  const card = document.querySelector(`.th[data-k="${e.who}"]`);
+  if (!card || !cell) return false;
+  if ((cell._q || 0) > 3 || flying > 16) return false;         // too fast to show every item
+  const ms = Math.max(300, Math.min(750, 750 / Math.max(1, sim ? sim.speed : 1)));
+  const n = sim ? sim.slots.length : 1;
+  cell._q = (cell._q || 0) + 1;
+  const step = () => new Promise(res => {
+    card._hold = {until: performance.now() + ms + 350,
+      text: e.kind === "insert" ? `buffer[${e.slot}] = ${e.item};  in = ${(e.slot + 1) % n}`
+                                : `item = buffer[${e.slot}];  out = ${(e.slot + 1) % n}`};
+    flash(card, e.err ? "bad" : "hit");
+    if (e.kind === "insert"){
+      const old = cell.classList.contains("full") ? cell.textContent : "";
+      cell.classList.add("wait");
+      fly(e.item, e.err ? "bad" : "p", centerOf(card, "r"), centerOf(cell), ms, () => {
+        cell.classList.remove("wait");
+        setCell(cell, e.item);
+        if (e.err){ if (old) dropLost(old, centerOf(cell)); raceMark(cell); } else flash(cell, "fin");
+        res();
+      });
+    } else {
+      setCell(cell, null);
+      if (e.err) raceMark(cell); else flash(cell, "fout");
+      fly(e.err ? "?" : e.item, e.err ? "bad" : "c", centerOf(cell), centerOf(card, "l"), ms, () => res());
+      setTimeout(res, ms * 0.55);                                 // the slot is free once the item has left it
+    }
+  });
+  cell._chain = (cell._chain || Promise.resolve()).then(step).then(() => { cell._q--; });
+  return true;
+}
 function onEvent(e){
   const plain = plainLine(e);
   addLog(htmlLine(plain), plain);
@@ -313,12 +388,13 @@ function onEvent(e){
   if (csvRows.length > 200000) csvRows.shift();
   holder = {who: e.who, until: performance.now() + 500};
   const cell = document.querySelectorAll("#cells .cell")[e.slot];
-  if (cell){
-    cell.classList.remove("fin", "fout");
+  if (cell) cell.classList.remove("fin", "fout");
+  const animated = animateEvent(e, cell);
+  if (!animated) flash(document.querySelector(`.th[data-k="${e.who}"]`), e.err ? "bad" : "hit");
+  if (!animated && cell){
     if (e.err){ flash(cell, "race"); clearTimeout(cell._rt); cell._rt = setTimeout(() => cell.classList.remove("race"), 2500); }
     else flash(cell, e.kind === "insert" ? "fin" : "fout");
   }
-  flash(document.querySelector(`.th[data-k="${e.who}"]`), e.err ? "bad" : "hit");
   const txt = e.kind === "insert" ? `${e.who} → buffer[${e.slot}] = ${e.item}` : `buffer[${e.slot}] → ${e.who} (${e.item})`;
   $("#last").innerHTML = e.err ? `<span class="bad">⚠ ${txt} · ${RACE_MN[e.err]}</span>`
     : `<span class="${e.kind === "insert" ? "in" : "out"}">${txt}</span>`;
@@ -340,8 +416,8 @@ function build(s){
   for (const id of ["#outRow", "#cells", "#idxRow", "#inRow"]) $(id).style.gridTemplateColumns = cols;
   $("#cells").innerHTML = s.slots.map(() => `<div class="cell"></div>`).join("");
   $("#idxRow").innerHTML = s.slots.map((_, i) => `<div class="idx">${i}</div>`).join("");
-  $("#outRow").innerHTML = s.slots.map(() => `<div class="ptr out"><span>out ▼</span></div>`).join("");
-  $("#inRow").innerHTML = s.slots.map(() => `<div class="ptr in"><span>▲ in</span></div>`).join("");
+  $("#outRow").innerHTML = `<div class="mk out"><span>out ▼</span></div>`;
+  $("#inRow").innerHTML = `<div class="mk in"><span>▲ in</span></div>`;
   $("#bEmpty").innerHTML = $("#bFull").innerHTML = s.slots.map(() => "<i></i>").join("");
   const card = k => `<div class="th" data-k="${k}" data-st="idle"><div class="row"><span class="nm">${k}</span><span class="st">idle</span></div><code>—</code></div>`;
   const names = Object.keys(s.states);
@@ -386,11 +462,16 @@ function render(s){
 
   document.querySelectorAll("#cells .cell").forEach((el, i) => {
     const v = s.slots[i];
+    if (el._q > 0) return;                             // this slot is still animating
     el.textContent = v === null ? "" : v;
     el.classList.toggle("full", v !== null);
   });
-  document.querySelectorAll("#outRow .ptr").forEach((el, i) => el.classList.toggle("on", i === s.out_idx));
-  document.querySelectorAll("#inRow .ptr").forEach((el, i) => el.classList.toggle("on", i === s.in_idx));
+  const n = s.slots.length;
+  for (const [sel, idx] of [["#outRow .mk", s.out_idx], ["#inRow .mk", s.in_idx]]){   // the index slides to its slot
+    const mk = document.querySelector(sel); if (!mk) continue;
+    const left = ((idx + 0.5) / n * 100).toFixed(3) + "%";
+    if (mk.style.left !== left){ if (mk.style.left) flash(mk, "bump"); mk.style.left = left; }
+  }
 
   const sem = (box, val, bar, v) => {
     $(val).textContent = v;
@@ -439,7 +520,9 @@ function render(s){
     row.classList.toggle("crit", crit);
     if (row.dataset.st !== st) row.dataset.st = st;
     row.querySelector(".st").textContent = st;
-    row.querySelector("code").textContent = code;
+    const hold = row._hold && row._hold.until > performance.now() ? row._hold.text : null;
+    const ce = row.querySelector("code");
+    ce.textContent = hold || code; ce.classList.toggle("step", !!hold);
   });
 }
 
