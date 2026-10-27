@@ -120,6 +120,29 @@ class TestWebUI(unittest.TestCase):
         self.post("/api/resume")
         self.assertFalse(self.state()["sim"]["paused"])
 
+    def test_mutex_off(self):
+        if self.ENGINE != "c":
+            self.skipTest("mutex switch is in the C engine only")
+        self.post("/api/start", dict(size=4, prod=4, cons=2, psleep=0.1, csleep=0.1, mutex=False))
+        time.sleep(0.5)
+        s = self.state()["sim"]
+        self.assertIs(s["mutex_on"], False)
+        self.assertIn("lost", s)
+        self.post("/api/stop")
+        time.sleep(0.3)
+        self.post("/api/reset")
+        self.post("/api/start", dict(size=3, prod=1, cons=2, psleep=1, csleep=0.1, bug="order"))
+        deadline = time.time() + 6
+        while time.time() < deadline and not self.state()["sim"].get("deadlock"):
+            time.sleep(0.2)
+        self.assertTrue(self.state()["sim"]["deadlock"])
+        self.post("/api/stop")
+        time.sleep(0.3)
+        self.post("/api/reset")
+        code, body = self.post("/api/start", dict(size=3, prod=1, cons=1, psleep=1, csleep=1, bug="bogus"))
+        self.assertEqual(code, 400)
+        self.assertIn("Алдааны төрөл", body["error"])
+
     def test_live_tune(self):
         code, _ = self.post("/api/tune", dict(speed=2))
         self.assertEqual(code, 400)                      # nothing running yet

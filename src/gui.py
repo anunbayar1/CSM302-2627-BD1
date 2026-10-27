@@ -96,6 +96,9 @@ def check_speed(v):
     return sp
 
 
+BUGS = ["none", "no_mutex", "no_empty", "no_full", "order"]   # C experiments (buffer.h BUG_*)
+
+
 class CController:
     """Runs the C/Pthreads program in --ui mode and relays its output to the page."""
 
@@ -119,10 +122,16 @@ class CController:
                 raise ValueError("Симуляци ажиллаж байна. Эхлээд «Зогсоох» дарна уу.")
             size, p, c, ps, cs, sp = check_params(cfg)
             paused = bool(cfg.get("paused"))
+            bug = str(cfg.get("bug", "none")).replace("-", "_")
+            if cfg.get("mutex", True) in (False, 0, "0", "false", "off"):
+                bug = "no_mutex"
+            if bug not in BUGS:
+                raise ValueError("Алдааны төрөл буруу: " + ", ".join(BUGS))
+            mutex = bug != "no_mutex"
             build_c_engine()
             proc = subprocess.Popen(
                 [C_BIN, "--ui", str(size), str(p), str(c), repr(ps), repr(cs), repr(sp),
-                 "1" if paused else "0"],
+                 "1" if paused else "0", str(BUGS.index(bug))],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True, bufsize=1)
             names = [f"P{i + 1}" for i in range(p)] + [f"C{i + 1}" for i in range(c)]
@@ -131,11 +140,12 @@ class CController:
                 self.snap = dict(engine="c", slots=[None] * size, in_idx=0, out_idx=0, last=None,
                                  empty=size, full=0, mutex_locked=False,
                                  states={n: "idle" for n in names}, produced=0, consumed=0,
-                                 paused=paused, stopped=False, speed=sp, prod_sleep=ps,
+                                 mutex_on=mutex, lost=0, bad_reads=0, bug=bug, deadlock=False,
+                                 owner=None, waits={n: "" for n in names}, paused=paused, stopped=False, speed=sp, prod_sleep=ps,
                                  cons_sleep=cs, elapsed=0.0)
                 self.proc = proc
             self.run_id += 1
-            self.config = dict(size=size, prod=p, cons=c, psleep=ps, csleep=cs)
+            self.config = dict(size=size, prod=p, cons=c, psleep=ps, csleep=cs, bug=bug)
             self.reader = threading.Thread(target=self._read, args=(proc,), daemon=True)
             self.reader.start()
 
@@ -144,17 +154,18 @@ class CController:
         for line in proc.stdout:
             if line.startswith("E "):
                 parts = line.split()
-                if len(parts) not in (6, 7):
+                if len(parts) not in (6, 7, 8):
                     continue
                 _, kind, who, slot, item, t = parts[:6]
-                count = int(parts[6]) if len(parts) == 7 else None
+                count = int(parts[6]) if len(parts) >= 7 else None
+                err = int(parts[7]) if len(parts) == 8 else 0
                 with self.ev_lock:
                     if proc is not self.proc:
                         continue
                     self.seq += 1
                     self.events.append(dict(seq=self.seq, kind="insert" if kind == "I" else "remove",
                                             who=who, slot=int(slot), item=int(item), t=float(t),
-                                            count=count))
+                                            count=count, err=err))
                     if len(self.events) > MAX_EVENTS:
                         del self.events[:-MAX_EVENTS]
             elif line.startswith("S "):

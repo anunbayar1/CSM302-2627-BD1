@@ -21,4 +21,13 @@ void buffer_snapshot(int *slots, int *has, int *in_idx, int *out_idx, int *last,
 void buffer_sem_values(int *empty_v, int *full_v);
 int  buffer_mutex_busy(void);
 
+/* experiments: the same code with one classic mistake */
+enum { BUG_NONE, BUG_NO_MUTEX, BUG_NO_EMPTY, BUG_NO_FULL, BUG_ORDER };
+#define RACE_OVERWRITE  1   /* insert hit a slot that still held an item: that item is lost */
+#define RACE_EMPTY_READ 2   /* remove read a slot that held no item: garbage / duplicate   */
+void buffer_set_bug(int bug, long window_ns);   /* window: pause in the critical section (no mutex) */
+int  buffer_bug(void);
+int  buffer_mutex_on(void);
+int  buffer_holder_blocked(void);   /* "order": a thread waits on a semaphore while holding the mutex */
+
 #endif

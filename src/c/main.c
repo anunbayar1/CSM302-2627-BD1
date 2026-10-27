@@ -2,13 +2,19 @@
  * main.c — Producer–Consumer with Pthreads
  * OS Concepts (10th ed.), Chapter 7, Programming Project 4 (Figures 7.15, 7.16).
  *
- * usage: ./producer_consumer [-q] <sleep_seconds> <producers> <consumers> [max_nap_seconds]
+ * usage: ./producer_consumer [-q] [--bug KIND] <sleep_seconds> <producers> <consumers> [max_nap_seconds]
  *        ./producer_consumer --ui ...   (engine for the web UI, see ui.c)
  *   sleep_seconds    how long main() sleeps before terminating  (book parameter 1)
  *   producers        number of producer threads                 (book parameter 2)
  *   consumers        number of consumer threads                 (book parameter 3)
  *   max_nap_seconds  optional: longest random sleep of a thread (default 1.0)
  *   -q               only print the final summary
+ *   --bug KIND       experiment with one classic mistake, the errors are reported:
+ *                      no-mutex  no mutex lock          -> race condition (lost / garbage items)
+ *                      no-empty  producer skips wait(empty) -> overflow (unread items overwritten)
+ *                      no-full   consumer skips wait(full)  -> underflow (empty slots read)
+ *                      order     wait(mutex) before wait(empty/full) -> deadlock
+ *   --no-mutex       same as --bug no-mutex
  */
 #include <errno.h>
 #include <pthread.h>
@@ -23,6 +29,9 @@
 
 atomic_int  running = 1;
 atomic_long produced = 0, consumed = 0;          /* changed only under the buffer mutex */
+atomic_long lost = 0, bad_reads = 0;
+static atomic_long last_progress_ms = 0;          /* for the deadlock report */
+static const char *BUG_NAMES[] = {"none", "no-mutex", "no-empty", "no-full", "order"};
 _Thread_local char me[16] = "main";
 static int quiet = 0;
 static int ui_mode = 0;
@@ -41,25 +50,40 @@ double elapsed(void)
     return (t.tv_sec - t0.tv_sec) + (t.tv_nsec - t0.tv_nsec) / 1e9;
 }
 
-void sim_on_insert(buffer_item item, int slot, int count)
+void sim_waiting(int what) { if (ui_mode) ui_waiting(what); }
+void sim_lock_owner(int has) { if (ui_mode) ui_lock_owner(has); }
+
+static void progress(void) { atomic_store(&last_progress_ms, (long)(elapsed() * 1000)); }
+
+static const char *race_text(int err)
+{
+    return err == RACE_OVERWRITE ? "   !! slot was still full -> an item is lost"
+         : err == RACE_EMPTY_READ ? "   !! slot was empty -> read garbage" : "";
+}
+
+void sim_on_insert(buffer_item item, int slot, int count, int err)
 {
     atomic_fetch_add(&produced, 1);
-    if (ui_mode) { ui_on_insert(item, slot, count); return; }
+    progress();
+    if (err) atomic_fetch_add(&lost, 1);
+    if (ui_mode) { ui_on_insert(item, slot, count, err); return; }
     if (quiet) return;
     pthread_mutex_lock(&print_lock);
-    printf("[%7.3fs] producer %-3s produced %2d -> slot %d   (buffer %d/%d)\n",
-           elapsed(), me, item, slot, count, buffer_capacity());
+    printf("[%7.3fs] producer %-3s produced %2d -> slot %d   (buffer %d/%d)%s\n",
+           elapsed(), me, item, slot, count, buffer_capacity(), race_text(err));
     pthread_mutex_unlock(&print_lock);
 }
 
-void sim_on_remove(buffer_item item, int slot, int count)
+void sim_on_remove(buffer_item item, int slot, int count, int err)
 {
     atomic_fetch_add(&consumed, 1);
-    if (ui_mode) { ui_on_remove(item, slot, count); return; }
+    progress();
+    if (err) atomic_fetch_add(&bad_reads, 1);
+    if (ui_mode) { ui_on_remove(item, slot, count, err); return; }
     if (quiet) return;
     pthread_mutex_lock(&print_lock);
-    printf("[%7.3fs] consumer %-3s consumed %2d <- slot %d   (buffer %d/%d)\n",
-           elapsed(), me, item, slot, count, buffer_capacity());
+    printf("[%7.3fs] consumer %-3s consumed %2d <- slot %d   (buffer %d/%d)%s\n",
+           elapsed(), me, item, slot, count, buffer_capacity(), race_text(err));
     pthread_mutex_unlock(&print_lock);
 }
 
@@ -113,11 +137,12 @@ static void *consumer(void *param)
 static void usage(const char *prog)
 {
     fprintf(stderr,
-        "usage: %s [-q] <sleep_seconds> <producers> <consumers> [max_nap_seconds]\n"
+        "usage: %s [-q] [--bug KIND] <sleep_seconds> <producers> <consumers> [max_nap_seconds]\n"
         "  sleep_seconds    0 < x <= 3600\n"
         "  producers        1..%d\n"
         "  consumers        1..%d\n"
         "  max_nap_seconds  0..10 (default 1.0)\n"
+        "  --bug KIND       experiment: no-mutex | no-empty | no-full | order (deadlock)\n"
         "  buffer size is BUFFER_SIZE = %d (change with: make BUFFER_SIZE=10)\n",
         prog, MAX_THREADS, MAX_THREADS, BUFFER_SIZE);
 }
@@ -147,8 +172,18 @@ int main(int argc, char *argv[])
     }
 
     /* 1. Get command line arguments */
-    int a = 1;
-    if (argc > 1 && strcmp(argv[1], "-q") == 0) { quiet = 1; a = 2; }
+    int a = 1, bug = BUG_NONE;
+    for (; a < argc; a++) {
+        if (strcmp(argv[a], "-q") == 0) quiet = 1;
+        else if (strcmp(argv[a], "--no-mutex") == 0) bug = BUG_NO_MUTEX;
+        else if (strcmp(argv[a], "--bug") == 0 && a + 1 < argc) {
+            int k = -1;
+            for (int i = 0; i < 5; i++) if (strcmp(argv[a + 1], BUG_NAMES[i]) == 0) k = i;
+            if (k < 0) { fprintf(stderr, "error: unknown --bug '%s'\n", argv[a + 1]); usage(argv[0]); return 1; }
+            bug = k; a++;
+        }
+        else break;
+    }
     int n = argc - a;
     if (n < 3 || n > 4) { usage(argv[0]); return 1; }
 
@@ -172,9 +207,10 @@ int main(int argc, char *argv[])
 
     /* 2. Initialize buffer */
     if (buffer_init(BUFFER_SIZE) != 0) { perror("buffer_init"); return 1; }
+    buffer_set_bug(bug, 100 * 1000L);            /* without the mutex: 0.1 ms pause in the critical section */
     clock_gettime(CLOCK_MONOTONIC, &t0); t0_set = 1;
-    printf("BUFFER_SIZE=%d producers=%ld consumers=%ld run=%.2fs max_nap=%.2fs\n",
-           BUFFER_SIZE, np, nc, run_s, max_nap);
+    printf("BUFFER_SIZE=%d producers=%ld consumers=%ld run=%.2fs max_nap=%.2fs%s%s\n",
+           BUFFER_SIZE, np, nc, run_s, max_nap, bug ? " bug=" : "", bug ? BUG_NAMES[bug] : "");
 
     /* 3. Create producer thread(s)   4. Create consumer thread(s) */
     pthread_t tid[2 * MAX_THREADS];
@@ -197,13 +233,19 @@ int main(int argc, char *argv[])
     while (nanosleep(&ts, &ts) == -1 && errno == EINTR) {}
 
     /* 6. Exit — stop the threads, wait for them, then check that nothing was lost */
+    double idle = elapsed() - atomic_load(&last_progress_ms) / 1000.0;
+    int deadlock = buffer_holder_blocked() && idle > 0.3;
     atomic_store(&running, 0);
     for (int i = 0; i < made; i++) pthread_join(tid[i], NULL);
 
     int left = buffer_count();
-    int ok = produced - consumed == left;
+    int ok = produced - consumed == left && lost == 0 && bad_reads == 0 && !deadlock;
     printf("\nproduced=%ld consumed=%ld in_buffer=%d -> %s\n",
-           (long)produced, (long)consumed, left, ok ? "CONSISTENT" : "INCONSISTENT");
+           (long)produced, (long)consumed, left, deadlock ? "DEADLOCK" : ok ? "CONSISTENT" : "INCONSISTENT");
+    if (deadlock)
+        printf("DEADLOCK: no progress for the last %.1fs (a thread holds the mutex while it waits on a semaphore)\n", idle);
+    else if (bug || !ok)
+        printf("errors: lost_items=%ld bad_reads=%ld\n", (long)lost, (long)bad_reads);
     buffer_destroy();
-    return ok ? 0 : 2;
+    return deadlock ? 3 : ok ? 0 : 2;
 }

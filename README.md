@@ -1,8 +1,11 @@
 # V-1-12 – Producer–Consumer Problem (Buffer Animation)
 
 **Хичээл:** F.CSM302 Үйлдлийн систем
+
 **Багийн код (хуваарилалтын код):** V-1-12
+
 **Сурах бичгийн бүлэг:** 7-р бүлэг – Synchronization Examples (Silberschatz, Galvin, Gagne – Operating System Concepts, 10th ed.)
+
 **Төслийн нэр:** Programming Project 4 – The Producer–Consumer Problem (Buffer animation UI)
 
 ## Багийн гишүүд
@@ -38,6 +41,7 @@ python3 src/gui.py
 # 3. Тушаалын мөрөөс (номын дагуу)
 make -C src/c
 ./src/c/producer_consumer 5 3 3      # <унтах сек> <producers> <consumers>
+./src/c/producer_consumer --bug no-mutex 5 3 3   # туршилт: no-mutex | no-empty | no-full | order
 
 # 4. Автомат тест (GUI шаардахгүй)
 python3 -m unittest discover -s tests
@@ -77,7 +81,7 @@ py src\gui.py
 | `src/gui.py` | localhost веб сервер (Python стандарт сан), C программыг удирдана |
 | `src/bounded_buffer.py` | Python хэрэгжүүлэлт (шуудангийн жишээтэй горимд) |
 | `src/ui/` | `home.html` (горим сонгох), `mail.html` (шуудангийн жишээ), `raw.html` (C · Pthreads), `tour.json` (дуут тайлбар) |
-| `tests/` | `test_buffer.py`, `test_c.py`, `test_web.py` (нийт 37 автомат тест) |
+| `tests/` | `test_buffer.py`, `test_c.py`, `test_web.py` (нийт 42 автомат тест) |
 | `tools/` | `make_voice.py` – дуут тайлбарын аудио үүсгэгч (edge-tts) |
 
 ## Үндсэн боломжууд
@@ -89,6 +93,15 @@ py src\gui.py
 * Start / Pause / Step / Stop / Reset удирдлага.
 * `empty`, `full` семафорын утга, `mutex`-ийн эзэмшигч болон хүлээж буй thread-үүд, `in` / `out` заагч.
 * `produced − consumed = buffer ✓` тууштай байдлын шалгалт.
+* **Алдааны туршилт** (C хуудасны «алдаа» сонголт, CLI `--bug`): зөв кодоос нэг алдаа гаргаж, юу болохыг харуулна. Алдаа бүр улаанаар тэмдэглэгдэж, лог болон эцсийн дүнд гарна.
+
+  | Сонголт | Кодын алдаа | Үр дагавар |
+  |---|---|---|
+  | `no-mutex` | `pthread_mutex_lock/unlock` байхгүй | race condition: хоёр thread нэг нүд рүү бичиж item алга болно |
+  | `no-empty` | producer `sem_wait(&empty)` хийхгүй | overflow: уншаагүй item дээр дарж бичнэ |
+  | `no-full` | consumer `sem_wait(&full)` хийхгүй | underflow: хоосон нүднээс уншина |
+  | `order` | `mutex_lock` → `sem_wait` дараалал буруу | deadlock: mutex барьсан thread семафор хүлээж, бусад нь mutex хүлээнэ |
+* producer / consumer sleep (0–3 сек) болон хурд (0.25–4×)-ыг гулсуураар 0.05-ын нарийвчлалтай, ажиллаж байх үед тохируулна.
 * Лог-ийг `.txt` эсвэл `.csv` хэлбэрээр татаж авах.
 
 ## Хэрэглэсэн бэлэн код, сан, AI
@@ -101,5 +114,7 @@ py src\gui.py
 
 * C хөдөлгүүр зөвхөн Linux дээр ажиллана (`sem_timedwait`). Windows дээр WSL2 хэрэгтэй. WSL2-гүй Windows дээр зөвхөн Python горим ажиллана. macOS дээр туршаагүй.
 * Mutex-ийг микросекунд л барьдаг тул UI дээр сүүлийн эзэмшигчийг ~0.5 сек харуулдаг (зөвхөн дүрслэлийн сунгалт).
+* `no-mutex` туршилтад race condition-ийг харагдахуйц болгохын тулд critical section дотор түр завсар (UI: 40 мс, CLI: 0.1 мс) нэмсэн. Энэ нь thread-ийг тэр мөчид өөр thread тасалдуулсныг (preemption) дуурайлгана. Бусад горимд энэ завсар байхгүй.
+* Алдаа илрүүлэхэд нүд бүрт дүүрэн / хоосон эсэхийг тэмдэглэх атомар шалгагч (`occ[]`) ашигладаг. Энэ нь алгоритмын хэсэг биш, зөвхөн хэмжилт.
 * UI 50 мс тутам төлөв уншдаг тул `empty + full` түр зуур BUFFER_SIZE-аас бага харагдаж болно (thread `sem_wait`-ийн дараа, `sem_post`-оос өмнө байх үед). Энэ нь алдаа биш.
 * Дуут тайлбарын аудиог `tools/make_voice.py` (интернет шаардлагатай) үүсгэнэ. Аудио байхгүй бол хөтчийн хоолойг ашиглана.

@@ -61,6 +61,7 @@ main{flex:1;min-height:0;display:grid;gap:12px;padding:12px 20px 16px;
 .stp input{width:34px;border:0;background:transparent;text-align:center;font:700 15px ui-monospace,monospace;color:var(--ink);-moz-appearance:textfield}
 .stp input::-webkit-inner-spin-button,.stp input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;background:var(--soft);height:34px;padding:3px;gap:2px}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
 .seg button{border:0;background:transparent;border-radius:7px;padding:0 8px;font-size:12.5px;font-weight:600;color:var(--muted)}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .seg.p button.on{color:var(--green)} .seg.c button.on{color:var(--blue)}
@@ -93,6 +94,10 @@ main{flex:1;min-height:0;display:grid;gap:12px;padding:12px 20px 16px;
 .th[data-st=paused]{border-left-color:var(--violet)} .th[data-st=paused] .st{background:var(--violet-soft);color:var(--violet)}
 .th[data-st=stopped],.th[data-st=idle]{opacity:.6}
 .th.hit{animation:hit .55s ease-out}
+.th.bad{animation:bad .8s ease-out}
+@keyframes bad{0%{box-shadow:0 0 0 4px var(--red)}100%{box-shadow:0 0 0 0 transparent}}
+.th.crit{border-left-color:var(--red)!important;background:var(--red-soft)!important} .th.crit code{color:var(--red)!important;font-weight:700}
+.th.crit .st{background:var(--red)!important;color:#fff!important}
 @keyframes hit{0%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
 .flow{display:grid;place-items:center;color:var(--line);font-size:22px;font-weight:800}
 .empty{color:var(--muted);font-size:13px;padding:8px 2px}
@@ -109,6 +114,8 @@ main{flex:1;min-height:0;display:grid;gap:12px;padding:12px 20px 16px;
 .cell{height:clamp(40px,10vh,120px);border-radius:10px;border:2px dashed var(--line);background:var(--card);display:grid;place-items:center;font:800 clamp(15px,2.6vh,28px) ui-monospace,monospace;color:var(--muted);transition:background .2s,border-color .2s}
 .cell.full{border:2px solid var(--amber);background:var(--amber-soft);color:var(--ink)}
 .cell.fin{animation:fin .55s ease-out} .cell.fout{animation:fout .55s ease-out}
+.cell.race{border:2px solid var(--red)!important;background:var(--red-soft)!important;color:var(--red)!important;animation:ferr .7s ease-out}
+@keyframes ferr{0%{box-shadow:0 0 0 7px var(--red);transform:scale(1.1)}100%{box-shadow:0 0 0 0 transparent;transform:none}}
 @keyframes fin{0%{box-shadow:0 0 0 5px var(--green);transform:scale(1.07)}100%{box-shadow:0 0 0 0 transparent;transform:none}}
 @keyframes fout{0%{box-shadow:0 0 0 5px var(--blue);transform:scale(.93)}100%{box-shadow:0 0 0 0 transparent;transform:none}}
 .idx{text-align:center;font:11px ui-monospace,monospace;color:var(--muted);margin-top:3px}
@@ -133,8 +140,24 @@ main{flex:1;min-height:0;display:grid;gap:12px;padding:12px 20px 16px;
 .totals{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;align-items:end}
 .totals div{font-size:10.5px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis}
 .totals b{display:block;font:800 20px ui-monospace,monospace;color:var(--ink)}
-.check{margin-top:8px;font:700 12.5px ui-monospace,monospace;padding:4px 9px;border-radius:999px;background:var(--soft);color:var(--muted);text-align:center}
+.check{margin-top:8px;font:700 12px ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:4px 9px;border-radius:999px;background:var(--soft);color:var(--muted);text-align:center}
 .check.ok{background:var(--green-soft);color:var(--green)} .check.bad{background:var(--red-soft);color:var(--red)}
+.racebadge{display:none;font:800 12px ui-monospace,monospace;padding:3px 9px;border-radius:999px;background:var(--red);color:#fff}
+.racebadge.on{display:inline-block}
+#sMutex.off{color:var(--gray)!important;background:var(--soft)} #sMutex.off .lock b{text-decoration:line-through}
+.sl{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+.sl input{width:118px;accent-color:var(--accent)}
+@media (max-width:1500px){.sl input{width:84px}.sl{padding:0 8px;gap:6px}.sl output{min-width:44px;font-size:12px}}
+.sl.p input{accent-color:var(--green)} .sl.c input{accent-color:var(--blue)}
+.sl output{font:700 13px ui-monospace,monospace;min-width:50px;text-align:right}
+.bugsel{height:34px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink);font:600 13px system-ui,sans-serif;padding:0 8px}
+.bugsel.on{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+.bufwrap{position:relative}
+.dl{display:none;position:absolute;inset:12px;border-radius:12px;background:rgba(220,38,38,.12);border:2px solid var(--red);place-items:center;text-align:center;color:var(--red);font:800 34px ui-monospace,monospace;pointer-events:none;backdrop-filter:blur(1px)}
+.dl.on{display:grid}
+.dl small{display:block;font:700 15px ui-monospace,monospace;margin-top:6px}
+.last .bad{color:var(--red)}
+pre .x{color:#fca5a5;font-weight:700}
 
 /* ---------- log ---------- */
 .logc{display:flex;flex-direction:column;min-height:0;padding:10px 14px 12px}
@@ -174,9 +197,16 @@ pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
       <div class="ctl"><span class="label">producers</span><div class="stp" data-for="prod"><button type="button">−</button><input id="prod" type="number" min="1" max="10" value="2"><button type="button">+</button></div></div>
       <div class="ctl"><span class="label">consumers</span><div class="stp" data-for="cons"><button type="button">−</button><input id="cons" type="number" min="1" max="10" value="2"><button type="button">+</button></div></div>
       <div class="vsep"></div>
-      <div class="ctl"><span class="label">producer хурд</span><div class="seg p" data-for="psleep"><button type="button" data-v="2">удаан</button><button type="button" data-v="1">дунд</button><button type="button" data-v="0.3">хурдан</button></div><input id="psleep" type="hidden" value="1"></div>
-      <div class="ctl"><span class="label">consumer хурд</span><div class="seg c" data-for="csleep"><button type="button" data-v="2">удаан</button><button type="button" data-v="1">дунд</button><button type="button" data-v="0.3">хурдан</button></div><input id="csleep" type="hidden" value="1"></div>
-      <div class="ctl"><span class="label">хурд</span><div class="seg" data-for="speed"><button type="button" data-v="0.5">½×</button><button type="button" data-v="1">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="4">4×</button></div><input id="speed" type="hidden" value="1"></div>
+      <div class="ctl"><span class="label">producer sleep</span><div class="sl p"><input id="psleep" type="range" min="0" max="3" step="0.05" value="1"><output data-for="psleep" data-u=" s"></output></div></div>
+      <div class="ctl"><span class="label">consumer sleep</span><div class="sl c"><input id="csleep" type="range" min="0" max="3" step="0.05" value="1"><output data-for="csleep" data-u=" s"></output></div></div>
+      <div class="ctl"><span class="label">хурд</span><div class="sl"><input id="speed" type="range" min="0.25" max="4" step="0.05" value="1"><output data-for="speed" data-u="×"></output></div></div>
+      <div class="ctl"><span class="label">алдаа</span><select id="bug" class="bugsel">
+        <option value="none">✓ зөв код</option>
+        <option value="no_mutex">mutex-гүй → race</option>
+        <option value="no_empty">wait(empty)-гүй → overflow</option>
+        <option value="no_full">wait(full)-гүй → underflow</option>
+        <option value="order">lock → wait дараалал → deadlock</option>
+      </select></div>
       <label class="chk"><input id="paused" type="checkbox">step</label>
       <div class="actions">
         <button class="btn primary" id="bStart" title="Start">▶<span class="t"> Start</span></button>
@@ -197,12 +227,13 @@ pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
     <div class="flow">→</div>
     <div class="center">
       <div class="bufwrap">
-        <div class="bufhead"><span class="label">buffer</span><code id="decl">buffer_item buffer[5]</code></div>
+        <div class="bufhead"><span class="label">buffer</span><span class="racebadge" id="race">⚠ race 0</span><code id="decl">buffer_item buffer[5]</code></div>
         <div class="buf" id="outRow"></div>
         <div class="buf" id="cells"></div>
         <div class="buf" id="idxRow"></div>
         <div class="buf" id="inRow"></div>
         <div class="last" id="last"></div>
+        <div class="dl" id="dl"><div>⛔ DEADLOCK<small id="dlw"></small></div></div>
       </div>
       <div class="sems">
         <div class="sem" id="sEmpty"><div class="top"><span class="name">empty</span><span class="type">sem_t</span></div><div class="val" id="vEmpty">–</div><div class="bar" id="bEmpty"></div></div>
@@ -241,22 +272,25 @@ const API = "/api/c";
 const $ = s => document.querySelector(s);
 const CODE = {
   P: {sleeping: "nanosleep()", producing: "item = rand()", paused: "— step —",
-      wsem: "sem_wait(&empty)", lock: "pthread_mutex_lock(&mutex)", stopped: "pthread_exit()", idle: "—"},
+      wsem: "sem_wait(&empty)", lock: "pthread_mutex_lock(&mutex)", crit: "buffer[in] = item", stopped: "pthread_exit()", idle: "—"},
   C: {sleeping: "nanosleep()", consuming: "use(item)", paused: "— step —",
-      wsem: "sem_wait(&full)", lock: "pthread_mutex_lock(&mutex)", stopped: "pthread_exit()", idle: "—"},
+      wsem: "sem_wait(&full)", lock: "pthread_mutex_lock(&mutex)", crit: "item = buffer[out]", stopped: "pthread_exit()", idle: "—"},
 };
+const RACE_TXT = {1: "!! slot was still full -> an item is lost", 2: "!! slot was empty -> read garbage"};
+const RACE_MN = {1: "дарж бичив, өмнөх item алга болов", 2: "хоосон нүднээс уншив"};
 let run = -1, seq = 0, sim = null, nKey = "", logLines = [], fullLog = [], csvRows = [], runInfo = null, summarized = false;
-let holder = null;   // {who, until}: last thread inside the critical section (the real lock lasts microseconds)
+let holder = null, dlLogged = false;   // {who, until}: last thread inside the critical section (the real lock lasts microseconds)
 
 /* ---------- log ---------- */
 function plainLine(e){
   const t = e.t.toFixed(3).padStart(7, " "), who = e.who.padEnd(3, " "), it = String(e.item).padStart(2, " ");
   const tail = e.count == null ? "" : `   (buffer ${e.count}/${sim ? sim.slots.length : "?"})`;
+  const race = e.err ? "   " + RACE_TXT[e.err] : "";
   return e.kind === "insert"
-    ? `[${t}s] producer ${who} produced ${it} -> slot ${e.slot}${tail}`
-    : `[${t}s] consumer ${who} consumed ${it} <- slot ${e.slot}${tail}`;
+    ? `[${t}s] producer ${who} produced ${it} -> slot ${e.slot}${tail}${race}`
+    : `[${t}s] consumer ${who} consumed ${it} <- slot ${e.slot}${tail}${race}`;
 }
-const htmlLine = p => p.replace(/(producer \S+)/, '<span class="p">$1</span>').replace(/(consumer \S+)/, '<span class="c">$1</span>');
+const htmlLine = p => p.replace(/(producer \S+)/, '<span class="p">$1</span>').replace(/(consumer \S+)/, '<span class="c">$1</span>').replace(/(!! .*)$/, '<span class="x">$1</span>');
 function addLog(html, plain){
   logLines.push(html);
   if (logLines.length > 600) logLines.splice(0, logLines.length - 600);
@@ -274,15 +308,20 @@ function onEvent(e){
   const plain = plainLine(e);
   addLog(htmlLine(plain), plain);
   csvRows.push([e.t.toFixed(3), e.who, e.kind === "insert" ? "producer" : "consumer",
-                e.kind === "insert" ? "insert_item" : "remove_item", e.item, e.slot, e.count ?? "", sim ? sim.slots.length : ""].join(","));
+                e.kind === "insert" ? "insert_item" : "remove_item", e.item, e.slot, e.count ?? "", sim ? sim.slots.length : "",
+                e.err === 1 ? "overwrite" : e.err === 2 ? "empty_read" : ""].join(","));
   if (csvRows.length > 200000) csvRows.shift();
   holder = {who: e.who, until: performance.now() + 500};
   const cell = document.querySelectorAll("#cells .cell")[e.slot];
-  if (cell){ cell.classList.remove("fin", "fout"); flash(cell, e.kind === "insert" ? "fin" : "fout"); }
-  flash(document.querySelector(`.th[data-k="${e.who}"]`), "hit");
-  $("#last").innerHTML = e.kind === "insert"
-    ? `<span class="in">${e.who} → buffer[${e.slot}] = ${e.item}</span>`
-    : `<span class="out">buffer[${e.slot}] → ${e.who} (${e.item})</span>`;
+  if (cell){
+    cell.classList.remove("fin", "fout");
+    if (e.err){ flash(cell, "race"); clearTimeout(cell._rt); cell._rt = setTimeout(() => cell.classList.remove("race"), 2500); }
+    else flash(cell, e.kind === "insert" ? "fin" : "fout");
+  }
+  flash(document.querySelector(`.th[data-k="${e.who}"]`), e.err ? "bad" : "hit");
+  const txt = e.kind === "insert" ? `${e.who} → buffer[${e.slot}] = ${e.item}` : `buffer[${e.slot}] → ${e.who} (${e.item})`;
+  $("#last").innerHTML = e.err ? `<span class="bad">⚠ ${txt} · ${RACE_MN[e.err]}</span>`
+    : `<span class="${e.kind === "insert" ? "in" : "out"}">${txt}</span>`;
 }
 function stamp(){
   const d = new Date(), z = x => String(x).padStart(2, "0");
@@ -320,14 +359,17 @@ function clearView(){
   $("#sEmpty").classList.remove("zero"); $("#sFull").classList.remove("zero");
   $("#vMutex").textContent = "free"; $("#sMutex").style.color = "var(--green)"; $("#mWait").innerHTML = "";
   $("#check").textContent = "—"; $("#check").className = "check"; $("#last").textContent = "";
+  $("#sMutex").classList.remove("off"); $("#race").classList.remove("on");
 }
 
 function render(s){
   const live = s && !s.stopped;
   $("#bStart").disabled = !!live;
   for (const id of ["#bPause", "#bStep", "#bStop"]) $(id).disabled = !live;
-  $("#bPause").innerHTML = s && s.paused && live ? '▶<span class="t"> Resume</span>' : '⏸<span class="t"> Pause</span>';
+  const pz = s && s.paused && live ? "r" : "p";
+  if ($("#bPause").dataset.m !== pz){ $("#bPause").dataset.m = pz; $("#bPause").innerHTML = pz === "r" ? '▶<span class="t"> Resume</span>' : '⏸<span class="t"> Pause</span>'; }
   for (const id of ["#size", "#prod", "#cons", "#paused"]) $(id).disabled = !!live;
+  $("#bug").disabled = !!live;
   document.querySelectorAll(".stp button").forEach(b => b.disabled = !!live);
   const pill = $("#pill");
   if (!s){
@@ -357,26 +399,44 @@ function render(s){
   };
   sem("#sEmpty", "#vEmpty", "#bEmpty", s.empty);
   sem("#sFull", "#vFull", "#bFull", s.full);
-  const kh = holder && holder.until > performance.now() && !s.stopped ? holder : null;
-  const locked = s.mutex_locked || !!kh;
-  $("#vMutex").textContent = kh ? kh.who : (locked ? "locked" : "free");
+  const mOn = s.mutex_on !== false, bug = s.bug || "none";
+  const kh = mOn && holder && holder.until > performance.now() && !s.stopped ? holder : null;
+  const own = !s.stopped && s.owner ? s.owner : null;
+  const locked = mOn && (!!own || s.mutex_locked || !!kh);
+  $("#sMutex").classList.toggle("off", !mOn);
+  $("#vMutex").textContent = !mOn ? "OFF" : own || (kh ? kh.who : (locked ? "locked" : "free"));
   $("#sMutex").style.color = locked ? "var(--red)" : "var(--green)";
   $("#shackle").setAttribute("transform", locked ? "" : "translate(0 -4)");
   $("#shackle").setAttribute("d", locked ? "M15 22v-6a9 9 0 0 1 18 0v6" : "M15 22v-6a9 9 0 0 1 18 0v-3");
-  const lockWait = s.stopped ? [] : Object.entries(s.states).filter(([k, st]) =>
-    st === "waiting" && (k[0] === "P" ? s.empty : s.full) > 0).map(([k]) => k);
+  const lockWait = s.stopped || !mOn ? [] : s.waits ? Object.keys(s.waits).filter(k => s.waits[k] === "lock")
+    : Object.entries(s.states).filter(([k, st]) => st === "waiting" && (k[0] === "P" ? s.empty : s.full) > 0).map(([k]) => k);
   $("#mWait").innerHTML = lockWait.length ? "⏳ " + lockWait.map(k => `<span class="w">${k}</span>`).join("") : "";
 
-  const count = s.slots.filter(x => x !== null).length, ok = s.produced - s.consumed === count;
+  const races = (s.lost || 0) + (s.bad_reads || 0);
+  const count = s.slots.filter(x => x !== null).length, ok = s.produced - s.consumed === count && races === 0;
   $("#vProd").textContent = s.produced; $("#vCons").textContent = s.consumed; $("#vCount").textContent = count;
+  $("#race").textContent = `⚠ ${races}`; $("#race").classList.toggle("on", (bug !== "none" && bug !== "order") || races > 0);
+  const dl = !!s.deadlock;
+  $("#dl").classList.toggle("on", dl);
+  if (dl && s.owner) $("#dlw").textContent = `${s.owner} 🔒 mutex → sem_wait(&${s.owner[0] === "P" ? "empty" : "full"})`;
   const ch = $("#check");
-  ch.textContent = `${s.produced} − ${s.consumed} = ${count} ${ok ? "✓" : (s.stopped ? "✗" : "…")}`;
-  ch.className = "check " + (ok ? "ok" : s.stopped ? "bad" : "");
+  ch.textContent = dl ? "⛔ deadlock" : races ? "✗ " + [s.lost ? `lost ${s.lost}` : "", s.bad_reads ? `garbage ${s.bad_reads}` : ""].filter(Boolean).join(" · ")
+    : `${s.produced} − ${s.consumed} = ${count} ${ok ? "✓" : (s.stopped ? "✗" : "…")}`;
+  ch.className = "check " + (ok && !dl ? "ok" : s.stopped || races || dl ? "bad" : "");
 
   document.querySelectorAll(".th").forEach(row => {
     const k = row.dataset.k, st = s.states[k] || "idle", side = k[0];
     let code = CODE[side][st] || "";
-    if (st === "waiting") code = (side === "P" ? s.empty : s.full) === 0 ? CODE[side].wsem : CODE[side].lock;
+    const semZero = (side === "P" ? s.empty : s.full) === 0;
+    const w = s.waits ? s.waits[k] : null;
+    let crit = false;
+    if (st === "waiting" && !s.stopped){
+      if (w === "sem"){ code = CODE[side].wsem; if (own === k){ code = "🔒 " + code; crit = true; } }   // waits holding the lock
+      else if (w === "lock") code = CODE[side].lock;
+      else if (w === ""){ code = CODE[side].crit; crit = !mOn; }       // inside the buffer code
+      else code = semZero ? CODE[side].wsem : (mOn ? CODE[side].lock : CODE[side].crit);
+    }
+    row.classList.toggle("crit", crit);
     if (row.dataset.st !== st) row.dataset.st = st;
     row.querySelector(".st").textContent = st;
     row.querySelector("code").textContent = code;
@@ -395,16 +455,25 @@ async function poll(){
     }
     if (d.sim && !sim){
       const c = d.config || {};
-      runInfo = {when: new Date().toLocaleString(), size: d.sim.slots.length, prod: c.prod, cons: c.cons, psleep: c.psleep, csleep: c.csleep};
-      const cmd = `$ ./producer_consumer --ui ${runInfo.size} ${c.prod} ${c.cons} ${c.psleep} ${c.csleep} ${d.sim.speed} ${d.sim.paused ? 1 : 0}`;
+      const bug = d.sim.bug || c.bug || "none", bi = ["none", "no_mutex", "no_empty", "no_full", "order"].indexOf(bug);
+      runInfo = {when: new Date().toLocaleString(), size: d.sim.slots.length, prod: c.prod, cons: c.cons, psleep: c.psleep, csleep: c.csleep, bug};
+      const cmd = `$ ./producer_consumer --ui ${runInfo.size} ${c.prod} ${c.cons} ${c.psleep} ${c.csleep} ${d.sim.speed} ${d.sim.paused ? 1 : 0} ${Math.max(0, bi)}`;
+      dlLogged = false;
       addLog(`<span class="h">${cmd}</span>`, cmd);
     }
     sim = d.sim;
     for (const e of d.events) onEvent(e);
+    if (d.sim && d.sim.deadlock && !dlLogged && d.sim.owner){
+      dlLogged = true;
+      const o = d.sim.owner, line = `!! DEADLOCK: ${o} holds the mutex and waits in sem_wait(&${o[0] === "P" ? "empty" : "full"}); the others wait for the mutex`;
+      addLog(`<span class="x">${line}</span>`, line);
+    }
     if (d.sim && d.sim.stopped && !summarized){
       summarized = true;
-      const c = d.sim.slots.filter(x => x !== null).length, ok = d.sim.produced - d.sim.consumed === c;
-      const line = `produced=${d.sim.produced} consumed=${d.sim.consumed} in_buffer=${c} -> ${ok ? "CONSISTENT" : "INCONSISTENT"}`;
+      const c = d.sim.slots.filter(x => x !== null).length, lost = d.sim.lost || 0, bad = d.sim.bad_reads || 0;
+      const ok = d.sim.produced - d.sim.consumed === c && lost + bad === 0 && !d.sim.deadlock;
+      let line = `produced=${d.sim.produced} consumed=${d.sim.consumed} in_buffer=${c} -> ${d.sim.deadlock ? "DEADLOCK" : ok ? "CONSISTENT" : "INCONSISTENT"}`;
+      if ((d.sim.bug && d.sim.bug !== "none" && !d.sim.deadlock) || (!ok && !d.sim.deadlock)) line += `\nerrors: lost_items=${lost} bad_reads=${bad}`;
       addLog(`\n<span class="h">${line}</span>`, "\n" + line);
     }
     if (d.events.length || d.sim) flushLog();
@@ -430,19 +499,27 @@ document.querySelectorAll(".stp").forEach(box => {
   const set = k => { inp.value = Math.max(+inp.min, Math.min(+inp.max, (parseInt(inp.value, 10) || +inp.min) + k)); };
   dec.onclick = () => set(-1); inc.onclick = () => set(1);
 });
-function segSync(){
-  document.querySelectorAll(".seg").forEach(g => {
-    const v = Number($("#" + g.dataset.for).value);
-    g.querySelectorAll("button").forEach(b => b.classList.toggle("on", Number(b.dataset.v) === v));
-  });
+function slSync(){
+  document.querySelectorAll(".sl output").forEach(o => { o.textContent = Number($("#" + o.dataset.for).value).toFixed(2) + o.dataset.u; });
+  $("#bug").classList.toggle("on", $("#bug").value !== "none");
 }
-document.querySelectorAll(".seg").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
-  $("#" + g.dataset.for).value = b.dataset.v; segSync();
+let tuneT = null, tuneLast = 0;
+function sendTune(){
+  tuneT = null; tuneLast = performance.now();
   if (sim && !sim.stopped) api("tune", {psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed")});
-}));
-segSync();
+}
+for (const id of ["#psleep", "#csleep", "#speed"]){
+  $(id).addEventListener("input", () => {             // live: at most ~8 updates per second while dragging
+    slSync();
+    if (!tuneT) tuneT = setTimeout(sendTune, Math.max(0, 120 - (performance.now() - tuneLast)));
+  });
+  $(id).addEventListener("change", () => { clearTimeout(tuneT); sendTune(); });
+}
+$("#bug").onchange = slSync;
+slSync();
 $("#bStart").onclick = () => api("start", {size: val("#size"), prod: val("#prod"), cons: val("#cons"),
-  psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed"), paused: $("#paused").checked});
+  psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed"), paused: $("#paused").checked,
+  bug: val("#bug")});
 $("#bPause").onclick = () => api(sim && sim.paused ? "resume" : "pause");
 $("#bStep").onclick = () => api("step");
 $("#bStop").onclick = () => api("stop");
@@ -453,12 +530,12 @@ $("#dlTxt").onclick = () => {
   const i = runInfo || {};
   const head = ["# Producer–Consumer · C / Pthreads (src/c/producer_consumer)",
     `# ${i.when || new Date().toLocaleString()}`,
-    `# BUFFER_SIZE=${i.size ?? "?"} producers=${i.prod ?? "?"} consumers=${i.cons ?? "?"} producer_sleep=${i.psleep ?? "?"}s consumer_sleep=${i.csleep ?? "?"}s`, ""];
+    `# BUFFER_SIZE=${i.size ?? "?"} producers=${i.prod ?? "?"} consumers=${i.cons ?? "?"} producer_sleep=${i.psleep ?? "?"}s consumer_sleep=${i.csleep ?? "?"}s bug=${i.bug || "none"}`, ""];
   download(`pc_log_${stamp()}.txt`, head.concat(fullLog).join("\n") + "\n", "text/plain;charset=utf-8");
 };
 $("#dlCsv").onclick = () => {
   if (!csvRows.length) return showErr("Лог хоосон байна.");
-  download(`pc_log_${stamp()}.csv`, "﻿time_s,thread,role,action,item,slot,buffer_count,buffer_size\n" + csvRows.join("\n") + "\n", "text/csv;charset=utf-8");
+  download(`pc_log_${stamp()}.csv`, "﻿time_s,thread,role,action,item,slot,buffer_count,buffer_size,race\n" + csvRows.join("\n") + "\n", "text/csv;charset=utf-8");
 };
 poll();
 </script>

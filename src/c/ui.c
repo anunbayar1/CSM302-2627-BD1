@@ -1,10 +1,11 @@
 /*
  * ui.c — the same producer/consumer threads, driven by the web UI (src/gui.py).
  *
- *   ./producer_consumer --ui <size> <producers> <consumers> <prod_sleep> <cons_sleep> <speed> <paused>
+ *   ./producer_consumer --ui <size> <producers> <consumers> <prod_sleep> <cons_sleep> <speed> <paused> [bug 0..4]
  *
  * stdout (one line each, flushed):
- *   E I <who> <slot> <item> <t> <count>   insert_item() just happened (E R ... for remove_item)
+ *   E I <who> <slot> <item> <t> <count> <err>   insert_item() just happened (E R ... for remove_item);
+ *                                               err = 0, or RACE_* in an experiment (bug != 0)
  *   S {json}                        a state snapshot, every 50 ms
  *   END                             all threads have been joined
  * stdin  (one command per line):
@@ -40,6 +41,14 @@ static atomic_int state[2 * MAX_THREADS];
 static pthread_mutex_t out_lock = PTHREAD_MUTEX_INITIALIZER;
 static double stopped_at = -1;
 static _Thread_local int my_idx;
+static atomic_int waitk[2 * MAX_THREADS];        /* WAIT_NONE / WAIT_SEM / WAIT_LOCK per thread */
+static atomic_int owner = -1;                    /* thread index holding the mutex, -1 = free */
+static atomic_long progress_ms = 0;              /* time of the last insert/remove */
+static atomic_int deadlocked = 0;
+static const char *BUGS[] = {"none", "no_mutex", "no_empty", "no_full", "order"};
+
+void ui_waiting(int what) { atomic_store(&waitk[my_idx], what); }
+void ui_lock_owner(int has) { atomic_store(&owner, has ? my_idx : -1); }
 
 static void get_params(double *ps, double *cs, double *sp)
 {
@@ -60,17 +69,19 @@ static void line(const char *s)
     pthread_mutex_unlock(&out_lock);
 }
 
-void ui_on_insert(buffer_item item, int slot, int count)
+void ui_on_insert(buffer_item item, int slot, int count, int err)
 {
     char b[96];
-    snprintf(b, sizeof b, "E I %s %d %d %.3f %d\n", me, slot, item, elapsed(), count);
+    atomic_store(&progress_ms, (long)(elapsed() * 1000));
+    snprintf(b, sizeof b, "E I %s %d %d %.3f %d %d\n", me, slot, item, elapsed(), count, err);
     line(b);
 }
 
-void ui_on_remove(buffer_item item, int slot, int count)
+void ui_on_remove(buffer_item item, int slot, int count, int err)
 {
     char b[96];
-    snprintf(b, sizeof b, "E R %s %d %d %.3f %d\n", me, slot, item, elapsed(), count);
+    atomic_store(&progress_ms, (long)(elapsed() * 1000));
+    snprintf(b, sizeof b, "E R %s %d %d %.3f %d %d\n", me, slot, item, elapsed(), count, err);
     line(b);
 }
 
@@ -170,11 +181,27 @@ static void snapshot(int stopped)
     for (int i = 0; i < np + nc; i++)
         k += snprintf(b + k, sizeof b - k, "%s\"%c%d\":\"%s\"", i ? "," : "",
                       i < np ? 'P' : 'C', i < np ? i + 1 : i - np + 1, ST_NAME[atomic_load(&state[i])]);
+    static const char *WK[] = {"", "sem", "lock"};
+    k += snprintf(b + k, sizeof b - k, "},\"waits\":{");
+    for (int i = 0; i < np + nc; i++)
+        k += snprintf(b + k, sizeof b - k, "%s\"%c%d\":\"%s\"", i ? "," : "",
+                      i < np ? 'P' : 'C', i < np ? i + 1 : i - np + 1, WK[atomic_load(&waitk[i])]);
+    int ow = atomic_load(&owner);
+    /* deadlock (experiment "order"): the mutex holder is blocked on a semaphore and nothing
+       has happened for a second — nobody can ever get in to signal it */
+    if (!stopped && buffer_holder_blocked() && elapsed() - atomic_load(&progress_ms) / 1000.0 > 1.0 &&
+        !atomic_load(&paused))
+        atomic_store(&deadlocked, 1);
+    k += ow < 0 ? snprintf(b + k, sizeof b - k, "},\"owner\":null")
+                : snprintf(b + k, sizeof b - k, "},\"owner\":\"%c%d\"", ow < np ? 'P' : 'C', ow < np ? ow + 1 : ow - np + 1);
+    k += snprintf(b + k, sizeof b - k, ",\"bug\":\"%s\",\"deadlock\":%s", BUGS[buffer_bug()],
+                  atomic_load(&deadlocked) ? "true" : "false");
     double el = stopped && stopped_at >= 0 ? stopped_at : elapsed();
     snprintf(b + k, sizeof b - k,
-             "},\"produced\":%ld,\"consumed\":%ld,\"paused\":%s,\"stopped\":%s,"
+             ",\"produced\":%ld,\"consumed\":%ld,\"mutex_on\":%s,\"lost\":%ld,\"bad_reads\":%ld,\"paused\":%s,\"stopped\":%s,"
              "\"speed\":%g,\"prod_sleep\":%g,\"cons_sleep\":%g,\"elapsed\":%.2f}\n",
              (long)atomic_load(&produced), (long)atomic_load(&consumed),
+             buffer_mutex_on() ? "true" : "false", (long)atomic_load(&lost), (long)atomic_load(&bad_reads),
              atomic_load(&paused) ? "true" : "false", stopped ? "true" : "false", sp, ps, cs, el);
     line(b);
 }
@@ -216,12 +243,12 @@ static void tune(char *args)
 
 int ui_main(int argc, char *argv[])
 {
-    double size, p, c, ps, cs, sp, pa;
-    if (argc != 7 || num(argv[0], 1, BUFFER_MAX, &size) || num(argv[1], 1, MAX_THREADS, &p) ||
+    double size, p, c, ps, cs, sp, pa, bg = 0;
+    if ((argc != 7 && argc != 8) || (argc == 8 && num(argv[7], 0, 4, &bg)) || num(argv[0], 1, BUFFER_MAX, &size) || num(argv[1], 1, MAX_THREADS, &p) ||
         num(argv[2], 1, MAX_THREADS, &c) || num(argv[3], 0, 10, &ps) || num(argv[4], 0, 10, &cs) ||
         num(argv[5], 0.25, 4, &sp) || num(argv[6], 0, 1, &pa)) {
         fprintf(stderr, "usage: --ui <size 1..%d> <producers> <consumers> <prod_sleep> "
-                        "<cons_sleep> <speed 0.25..4> <paused 0|1>\n", BUFFER_MAX);
+                        "<cons_sleep> <speed 0.25..4> <paused 0|1> [bug 0..4]\n", BUFFER_MAX);
         return 1;
     }
     np = (int)p; nc = (int)c; prod_sleep = ps; cons_sleep = cs; speed = sp;
@@ -230,12 +257,14 @@ int ui_main(int argc, char *argv[])
         fprintf(stderr, "ERR init failed\n");
         return 1;
     }
+    buffer_set_bug((int)bg, 40 * 1000000L);    /* without the mutex: 40 ms pause inside the
+                                                  critical section, so the race is visible */
 
     pthread_t tid[2 * MAX_THREADS], rep;
     warg args[2 * MAX_THREADS];
     unsigned base = (unsigned)time(NULL);
     int made = 0;
-    for (int i = 0; i < np + nc; i++) atomic_store(&state[i], ST_IDLE);
+    for (int i = 0; i < np + nc; i++) { atomic_store(&state[i], ST_IDLE); atomic_store(&waitk[i], WAIT_NONE); }
     for (int i = 0; i < np + nc; i++) {
         args[i].idx = i;
         args[i].seed = base ^ (unsigned)(i * 2654435761u);
