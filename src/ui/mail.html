@@ -76,33 +76,12 @@ h3{font-size:15px;margin:0;display:flex;align-items:center;gap:8px}
 
 /* settings */
 .field{margin-bottom:14px}
-.field-top{display:flex;align-items:center;gap:0;margin-bottom:6px;font-weight:600;font-size:14px}
+.field-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
 .field-top label{font-weight:600;font-size:14px}
 .field-top label small{display:block;font-size:11.5px;font-weight:500}
 .num{width:66px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);text-align:center;font-weight:700}
 .num.bad{border-color:var(--red);background:var(--red-soft)}
 input[type=range]{width:100%;accent-color:var(--accent)}
-.stepper{display:flex;align-items:center;gap:6px}
-.stepper button{width:34px;height:34px;flex:none;border-radius:10px;border:1px solid var(--line);background:var(--card);font:700 18px system-ui,sans-serif;cursor:pointer;color:var(--ink)}
-.stepper button:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}
-.stepper button:disabled{opacity:.4;cursor:not-allowed}
-.stepper .num{width:48px;height:34px;font-size:16px;padding:0}
-.preview{display:flex;flex-wrap:wrap;gap:3px;margin-left:8px;flex:1;min-width:0;align-items:center}
-.preview i{display:block}
-.preview i.sq{width:9px;height:13px;border-radius:2px;background:var(--box)}
-.preview i.pp{width:11px;height:11px;border-radius:50%;background:var(--green)}
-.preview i.cp{width:11px;height:11px;border-radius:50%;background:var(--blue)}
-.seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--gray-soft);padding:3px;border-radius:10px}
-.seg3 button{border:0;background:transparent;padding:7px 0;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;color:var(--muted)}
-.seg3 button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
-.seg3 button:disabled{cursor:not-allowed}
-.field .live{margin-left:6px}
-details.adv{margin:2px 0 12px}
-details.adv summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
-.advbody{display:grid;gap:6px;margin-top:8px}
-.advrow{display:flex;align-items:center;gap:8px;font-size:13px}
-.advrow .flabel2{flex:1}
-.advrow .num{width:64px}
 .presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .preset{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:5px 10px;font-size:12.5px;cursor:pointer}
 .preset:hover{border-color:var(--accent);color:var(--accent)}
@@ -468,7 +447,7 @@ td code{font-size:12px}
         <div class="queue" id="qFull"></div>
       </div>
       <div id="mMutex" class="card metric" style="color:var(--green)">
-        <div class="mhead"><span class="mtitle">Хайрцгийн түлхүүр</span><code>mutex</code></div>
+        <div class="mhead"><span class="mtitle">Түлхүүр</span><code>mutex</code></div>
         <div class="lock">
           <svg viewBox="0 0 48 48" aria-hidden="true"><path id="shackle" d="M15 22v-6a9 9 0 0 1 18 0v6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="9" y="21" width="30" height="22" rx="6" fill="currentColor"/><circle cx="24" cy="31" r="3" fill="var(--card)"/><rect x="22.5" y="31" width="3" height="6" rx="1.5" fill="var(--card)"/></svg>
           <div class="lk-txt" id="lockTxt">Чөлөөтэй</div>
@@ -547,7 +526,7 @@ const THEMES = {
     item: "захидал", itemOwn: "захидлаа", itemC: "Захидал", itemAcc: "захидлыг", itemGen: "захидлын",
     make: "Захидал авчирч байна", use: "Захидал уншиж байна", codeMake: "захидал авчирна", codeUse: "захидлаа уншина",
     put: "хийлээ", putLog: "хийв", putInf: "хийх", codePut: "хийнэ", putPast: "хийсэн",
-    lockRule: "Түлхүүр ганцхан: нэг хүн хайрцагт хандаж байхад бусад нь хүлээнэ", lockBusy: "Нэг хүн хайрцгийг онгойлгосон байна",
+    lockRule: "Нэг удаад ганцхан хүн хайрцгийг онгойлгоно", lockBusy: "Нэг хүн хайрцгийг онгойлгосон байна",
     closed: "Шуудан хаалттай байна", closedNow: "Шуудан хаагдлаа.", started: "Шуудан ажиллаж эхэллээ!",
     opened: "Шуудан нээгдлээ! Шуудан зөөгчид захидал авчирч, хүлээн авагчид авч эхэллээ.",
     lead: "Гудамжинд цөөхөн нүдтэй, жижигхэн шуудангийн хайрцаг байдаг. Шуудан зөөгчид захидал авчирч хайрцагт хийдэг, хүлээн авагчид ирж захидлаа аваад уншдаг. Хүн бүр өөрийн хурдаар ажилладаг тул хоорондоо мөргөлдөхгүйн тулд гурван дүрэм сахидаг.",
@@ -559,8 +538,8 @@ const FIELDS = [
   {key:"size",   label:() => `${T.boxGen} ${T.slot}`, tech:"buffer size", min:1, max:20, step:1,   def:5},
   {key:"prod",   label:() => T.prod,                  tech:"producers",   min:1, max:10, step:1,   def:2},
   {key:"cons",   label:() => T.cons,                  tech:"consumers",   min:1, max:10, step:1,   def:2},
-  {key:"psleep", live:true, label:() => `${T.prodGen} хурд`, tech:"max секунд", min:0, max:10, step:0.1, def:1.0},
-  {key:"csleep", live:true, label:() => `${T.consGen} хурд`, tech:"max секунд", min:0, max:10, step:0.1, def:1.0},
+  {key:"psleep", live:true, label:() => `${T.prodGen} амралт`, tech:"max секунд", min:0, max:10, step:0.1, def:1.0},
+  {key:"csleep", live:true, label:() => `${T.consGen} амралт`, tech:"max секунд", min:0, max:10, step:0.1, def:1.0},
 ];
 const PRESETS = [
   {name:() => "Тэнцүү",                v:{size:5,  prod:2, cons:2, psleep:1.0, csleep:1.0}},
@@ -602,7 +581,6 @@ const CODE = () => ({
       ["}", ""]],
 });
 let flashes = [];   // {side, who, until}
-let keyHolder = null;   // {who, kind, until}: who used the mutex last, shown briefly
 
 /* ---------- small svg builders ---------- */
 function itemSVG(n, cls){ return envSVG(n, cls); }
@@ -689,52 +667,27 @@ function renderQueues(s){
 
 /* ---------- settings panel ---------- */
 const inputs = {};
-const PACE = [["Удаан", 2.0], ["Дунд", 1.0], ["Хурдан", 0.3]];   // max sleep, seconds
 function buildFields(){
   const box = $("#fields");
-  const adv = document.createElement("details");
-  adv.className = "adv";
-  adv.innerHTML = `<summary>Нарийвчилсан (секундээр)</summary><div class="advbody"></div>`;
   for (const f of FIELDS){
     const d = document.createElement("div");
     d.className = "field";
-    const top = `<div class="field-top"><span class="flabel">${f.label()}</span>${f.live ? '<span class="live">LIVE</span>' : ""}</div>`;
-    let num;
-    if (f.step === 1){                                  // counts: − value +  and a small preview
-      d.innerHTML = top + `<div class="stepper"><button type="button" class="dec" aria-label="хасах">−</button>
-        <input id="n_${f.key}" class="num" type="number" min="${f.min}" max="${f.max}" value="${f.def}" aria-label="${f.label()}">
-        <button type="button" class="inc" aria-label="нэмэх">+</button><div class="preview pv-${f.key}"></div></div>`;
-      box.appendChild(d);
-      num = d.querySelector(".num");
-      const bump = k => { const x = Math.max(f.min, Math.min(f.max, (parseInt(num.value, 10) || f.def) + k));
-                          num.value = x; num.dispatchEvent(new Event("input")); };
-      d.querySelector(".dec").onclick = () => bump(-1);
-      d.querySelector(".inc").onclick = () => bump(1);
-    } else {                                            // pace: Удаан / Дунд / Хурдан (+ exact seconds in "advanced")
-      d.innerHTML = top + `<div class="seg3">${PACE.map(([n, v]) => `<button type="button" data-v="${v}">${n}</button>`).join("")}</div>`;
-      box.appendChild(d);
-      const row = document.createElement("label");
-      row.className = "advrow";
-      row.innerHTML = `<span class="flabel2">${f.label()}</span><input id="n_${f.key}" class="num" type="number" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}"><small>с</small>`;
-      adv.querySelector(".advbody").appendChild(row);
-      num = row.querySelector(".num");
-      d.querySelectorAll(".seg3 button").forEach(btn => btn.onclick = () => {
-        num.value = btn.dataset.v; num.dispatchEvent(new Event("input"));
-      });
-    }
-    const it = {num, f, el: d, sync: () => syncField(it)};
+    d.innerHTML = `<div class="field-top"><label for="n_${f.key}"><span class="flabel">${f.label()}</span>${f.live ? ' <span class="live">LIVE</span>' : ""}<small>${f.tech} · ${f.min}–${f.max}${f.live ? " · ажиллаж байхад өөрчилж болно" : ""}</small></label>
+      <input id="n_${f.key}" class="num" type="number" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}"></div>
+      <input id="r_${f.key}" type="range" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}" aria-label="${f.label()}">`;
+    box.appendChild(d);
+    const num = d.querySelector(".num"), rng = d.querySelector("input[type=range]");
+    rng.addEventListener("input", () => { num.value = rng.value; num.classList.remove("bad"); clearPreset(); if (f.live) liveTune(); });
     num.addEventListener("input", () => {
       const x = Number(num.value);
       const ok = num.value.trim() !== "" && !isNaN(x) && x >= f.min && x <= f.max && (f.step !== 1 || Number.isInteger(x));
       num.classList.toggle("bad", !ok);
+      if (ok) rng.value = x;
       clearPreset();
-      it.sync();
       if (ok && f.live) liveTune();
     });
-    inputs[f.key] = it;
-    it.sync();
+    inputs[f.key] = {num, rng, f};
   }
-  box.appendChild(adv);
   const pbox = $("#presets");
   PRESETS.forEach((p, i) => {
     const b = document.createElement("button");
@@ -743,19 +696,9 @@ function buildFields(){
     pbox.appendChild(b);
   });
 }
-function syncField(it){
-  const v = Number(it.num.value);
-  if (it.f.step === 1){
-    const n = Math.max(0, Math.min(it.f.max, Number.isInteger(v) ? v : 0));
-    const cls = it.f.key === "size" ? "sq" : it.f.key === "prod" ? "pp" : "cp";
-    it.el.querySelector(".preview").innerHTML = Array.from({length: n}, () => `<i class="${cls}"></i>`).join("");
-  } else {
-    it.el.querySelectorAll(".seg3 button").forEach(b => b.classList.toggle("on", Number(b.dataset.v) === v));
-  }
-}
 function clearPreset(){ document.querySelectorAll(".preset.on").forEach(b => b.classList.remove("on")); }
 function setValues(v){
-  for (const k in v){ const it = inputs[k]; it.num.value = v[k]; it.num.classList.remove("bad"); it.sync(); }
+  for (const k in v){ const it = inputs[k]; it.num.value = v[k]; it.rng.value = v[k]; it.num.classList.remove("bad"); }
 }
 function readValues(){
   const o = {};
@@ -765,8 +708,7 @@ function readValues(){
   return o;
 }
 function setInputsEnabled(on){
-  for (const k in inputs){ const lock = !on && !inputs[k].f.live; inputs[k].num.disabled = lock;
-    inputs[k].el.querySelectorAll("button").forEach(b => b.disabled = lock); }
+  for (const k in inputs){ const lock = !on && !inputs[k].f.live; inputs[k].num.disabled = lock; inputs[k].rng.disabled = lock; }
   document.querySelectorAll(".preset").forEach(b => b.disabled = !on);
   $("#stepMode").disabled = !on;
 }
@@ -816,7 +758,7 @@ function toast(msg, err){
 let run = -1, seq = 0, sim = null, layoutKey = "", hist = [], pendingIn = {}, logCount = 0, lastEventAt = 0;
 
 function resetView(){
-  layoutKey = ""; hist = []; pendingIn = {}; logCount = 0; flashes = []; keyHolder = null;
+  layoutKey = ""; hist = []; pendingIn = {}; logCount = 0; flashes = [];
   $("#log").innerHTML = `<li class="empty">Одоохондоо юу ч болоогүй байна.</li>`;
   $("#result").className = "result"; $("#result").textContent = "";
   $("#fly").innerHTML = "";
@@ -898,16 +840,11 @@ function render(d){
   const n = s.slots.length;
   setMetric("#mEmpty", "#vEmpty", "#dEmpty", s.empty, n);
   setMetric("#mFull", "#vFull", "#dFull", s.full, n);
-  // the real lock is held only for microseconds, so show the last holder for a moment
-  const kh = keyHolder && keyHolder.until > performance.now() && !s.stopped ? keyHolder : null;
-  const locked = s.mutex_locked || !!kh;
-  $("#mMutex").classList.toggle("locked", locked);
-  $("#mMutex").style.color = locked ? "var(--red)" : "var(--green)";
-  $("#shackle").setAttribute("d", locked ? "M15 22v-6a9 9 0 0 1 18 0v6" : "M15 22v-6a9 9 0 0 1 18 0v-3");
-  $("#shackle").setAttribute("transform", locked ? "" : "translate(0 -4)");
-  $("#lockTxt").innerHTML = kh
-    ? `🔑 <b>${kh.who}</b> түлхүүртэй: ${kh.kind === "insert" ? T.item + " хийж байна" : T.item + " авч байна"}`
-    : (locked ? T.lockBusy : "Чөлөөтэй: дараагийн хүн орж болно");
+  $("#mMutex").classList.toggle("locked", s.mutex_locked);
+  $("#mMutex").style.color = s.mutex_locked ? "var(--red)" : "var(--green)";
+  $("#shackle").setAttribute("d", s.mutex_locked ? "M15 22v-6a9 9 0 0 1 18 0v6" : "M15 22v-6a9 9 0 0 1 18 0v-3");
+  $("#shackle").setAttribute("transform", s.mutex_locked ? "" : "translate(0 -4)");
+  $("#lockTxt").textContent = s.mutex_locked ? T.lockBusy : "Чөлөөтэй";
 
   // stats + chart
   $("#sProd").textContent = s.produced; $("#sCons").textContent = s.consumed;
@@ -984,7 +921,6 @@ function handleEvent(e){
   lastEventAt = performance.now();
   const ins = e.kind === "insert";
   flashes.push({side: ins ? "P" : "C", who: e.who, until: performance.now() + 700});
-  keyHolder = {who: e.who, kind: e.kind, until: performance.now() + Math.max(450, flyMs())};
   $("#narr").innerHTML = ins
     ? `${T.prod} <b>${e.who}</b> <b>${e.item}</b> дугаартай ${T.itemAcc} <b>${e.slot}-р</b> ${T.slotDat} ${T.put}.`
     : `${T.cons} <b>${e.who}</b> <b>${e.slot}-р</b> ${T.slotAbl} <b>${e.item}</b> дугаартай ${T.itemAcc} авлаа.`;
@@ -1064,8 +1000,7 @@ function applyEx(ex){
   document.body.dataset.ex = EX;
   document.querySelectorAll("[data-t]").forEach(el => { el.textContent = T[el.dataset.t] !== undefined ? T[el.dataset.t] : (EXTRA[el.dataset.t] || (() => ""))(); });
   $("#brandIc").innerHTML = BRAND[EX]; $("#idleIc").innerHTML = BRAND[EX];
-  for (const k in inputs){ inputs[k].el.querySelector(".flabel").textContent = inputs[k].f.label();
-    const l2 = inputs[k].num.closest(".advrow"); if (l2) l2.querySelector(".flabel2").textContent = inputs[k].f.label(); }
+  for (const k in inputs){ inputs[k].num.closest(".field").querySelector(".flabel").textContent = inputs[k].f.label(); inputs[k].rng.setAttribute("aria-label", inputs[k].f.label()); }
   document.querySelectorAll(".preset").forEach((b, i) => b.textContent = PRESETS[i].name());
   $("#helpBody").innerHTML = helpHTML();
   document.title = `${T.title} · Producer–Consumer`;
