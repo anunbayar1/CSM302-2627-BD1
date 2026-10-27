@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C · Pthreads · шууд ажиллагаа</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --ink:#111827; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#2563eb; --green:#15803d; --blue:#1d4ed8; --amber:#b45309; --amber-bg:#fef3c7;
+  --red:#b91c1c; --violet:#7e22ce; --term:#0f172a; --term-ink:#e2e8f0;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0b0f17;--card:#121826;--ink:#e5e7eb;--muted:#9ca3af;--line:#243042;
+        --accent:#60a5fa;--green:#4ade80;--blue:#93c5fd;--amber:#fbbf24;--amber-bg:#3a2d10;
+        --red:#f87171;--violet:#d8b4fe;--term:#05070c;color-scheme:dark}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","DejaVu Sans",sans-serif}
+.mono,code,td.m,pre{font-family:ui-monospace,"DejaVu Sans Mono",Menlo,monospace}
+header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--card);flex-wrap:wrap}
+header a{color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-weight:600}
+header a:hover{border-color:var(--accent)}
+header h1{font-size:16px;margin:0}
+header .src{color:var(--muted);font-size:13px}
+.status{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:13px}
+.status b{font-family:ui-monospace,monospace}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);margin-right:6px;vertical-align:1px}
+.dot.run{background:var(--green)} .dot.pause{background:var(--violet)} .dot.stop{background:var(--red)}
+main{max-width:1280px;margin:0 auto;padding:16px 20px 28px;display:grid;gap:14px}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 10px}
+.controls{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end}
+.controls label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.controls input,.controls select{width:96px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:600 14px ui-monospace,monospace}
+.controls input.bad{border-color:var(--red)}
+.controls .chk{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--ink);padding-bottom:7px}
+.controls .chk input{width:auto}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:7px;padding:7px 13px;font:600 13.5px system-ui,sans-serif;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.err{display:none;color:var(--red);font-weight:600;margin-top:10px}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;align-items:start}
+.buf{display:grid;gap:5px;margin:4px 0}
+.ptr{text-align:center;font:700 11px ui-monospace,monospace;height:16px}
+.ptr.out{color:var(--blue)} .ptr.in{color:var(--green)}
+.cell{border:1px solid var(--line);border-radius:6px;height:46px;display:grid;place-items:center;font:700 16px ui-monospace,monospace;background:var(--bg)}
+.cell.full{background:#fde68a;color:#78350f;border-color:#f59e0b}
+.cell.last{outline:2px solid var(--accent);outline-offset:1px}
+.idx{text-align:center;font:11px ui-monospace,monospace;color:var(--muted)}
+.decl{font-size:12.5px;color:var(--muted);margin-top:8px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+td.v{font:700 18px ui-monospace,monospace;width:90px}
+td.v.zero{color:var(--red)}
+td.ok{color:var(--green);font-weight:700;white-space:nowrap}
+td.m{white-space:nowrap}
+td.no{color:var(--red);font-weight:700}
+.st{font-weight:700}
+.st.sleeping{color:var(--muted)} .st.producing{color:var(--green)} .st.consuming{color:var(--blue)}
+.st.waiting{color:var(--amber)} .st.paused{color:var(--violet)} .st.stopped,.st.idle{color:var(--muted)}
+tr.waiting td{background:var(--amber-bg)}
+.threads td.m{font-size:12.5px}
+pre{margin:0;background:var(--term);color:var(--term-ink);border-radius:8px;padding:10px 12px;height:280px;overflow:auto;font-size:12.5px;line-height:1.5;white-space:pre}
+pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
+.logbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.logbar label{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+@media (max-width:900px){.grid{grid-template-columns:1fr}.status{margin-left:0}}
+</style>
+</head>
+<body>
+<header>
+  <a href="/">← Нүүр</a>
+  <h1>Producer–Consumer · C / Pthreads</h1>
+  <span class="src mono">src/c/producer_consumer --ui</span>
+  <div class="status">
+    <span><span class="dot" id="dot"></span><span id="stText">ажиллаагүй</span></span>
+    <span>t = <b id="t">0.00</b> с</span>
+    <span>хурд <b id="spd">1×</b></span>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>Параметр</h2>
+    <div class="controls">
+      <label>BUFFER_SIZE (1–20)<input id="size" type="number" min="1" max="20" value="5"></label>
+      <label>producers (1–10)<input id="prod" type="number" min="1" max="10" value="2"></label>
+      <label>consumers (1–10)<input id="cons" type="number" min="1" max="10" value="2"></label>
+      <label>producer max sleep, с<input id="psleep" type="number" min="0" max="10" step="0.1" value="1"></label>
+      <label>consumer max sleep, с<input id="csleep" type="number" min="0" max="10" step="0.1" value="1"></label>
+      <label>хурд<select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+      <label class="chk"><input id="paused" type="checkbox">алхмаар эхлэх</label>
+      <div class="btns">
+        <button id="bStart" class="primary">Start</button>
+        <button id="bPause">Pause</button>
+        <button id="bStep">Step</button>
+        <button id="bStop">Stop</button>
+        <button id="bReset">Reset</button>
+      </div>
+    </div>
+    <div class="err" id="err"></div>
+  </section>
+
+  <div class="grid">
+    <section>
+      <h2>buffer[ ] — дугуй дараалал</h2>
+      <div class="buf" id="outRow"></div>
+      <div class="buf" id="cells"></div>
+      <div class="buf" id="idxRow"></div>
+      <div class="buf" id="inRow"></div>
+      <div class="decl mono" id="decl">buffer_item buffer[BUFFER_SIZE];  in = 0, out = 0</div>
+    </section>
+
+    <section>
+      <h2>Синхрончлол</h2>
+      <table>
+        <tr><th>нэр</th><th>утга</th><th>тайлбар</th></tr>
+        <tr><td class="m">sem_t empty</td><td class="v" id="vEmpty">–</td><td id="dEmpty">сул нүдний тоо. 0 бол producer <code>sem_wait(&amp;empty)</code> дээр хүлээнэ</td></tr>
+        <tr><td class="m">sem_t full</td><td class="v" id="vFull">–</td><td id="dFull">дүүрсэн нүдний тоо. 0 бол consumer <code>sem_wait(&amp;full)</code> дээр хүлээнэ</td></tr>
+        <tr><td class="m">pthread_mutex_t</td><td class="v" id="vMutex">–</td><td>буфер рүү нэг удаад нэг л thread орно</td></tr>
+      </table>
+      <table style="margin-top:10px">
+        <tr><th>шалгалт</th><th>утга</th><th></th></tr>
+        <tr><td>produced</td><td class="v" id="vProd">0</td><td></td></tr>
+        <tr><td>consumed</td><td class="v" id="vCons">0</td><td></td></tr>
+        <tr><td>produced − consumed = буфер доторх тоо</td><td class="m" id="vInv1">–</td><td id="cInv1"></td></tr>
+        <tr><td>empty + full = BUFFER_SIZE</td><td class="m" id="vInv2">–</td><td id="cInv2"></td></tr>
+      </table>
+    </section>
+  </div>
+
+  <section>
+    <h2>Thread-үүд</h2>
+    <table class="threads">
+      <thead><tr><th>thread</th><th>төлөв</th><th>одоо хийж буй үйлдэл</th></tr></thead>
+      <tbody id="threads"><tr><td colspan="3" style="color:var(--muted)">Start дарна уу.</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="logbar"><h2 style="margin:0">Програмын лог</h2><label><input type="checkbox" id="follow" checked> доош гүйлгэх</label></div>
+    <pre id="log"></pre>
+  </section>
+</main>
+
+<script>
+"use strict";
+const API = "/api/c";
+const $ = s => document.querySelector(s);
+const WHERE = {
+  P: {sleeping: "nanosleep(random)", producing: "item = rand() … (бэлдэж байна)", paused: "Step хүлээж байна",
+      wsem: "sem_wait(&empty)  ← буфер дүүрэн", lock: "pthread_mutex_lock(&mutex)", stopped: "pthread_exit", idle: "—"},
+  C: {sleeping: "nanosleep(random)", consuming: "item ашиглаж байна", paused: "Step хүлээж байна",
+      wsem: "sem_wait(&full)  ← буфер хоосон", lock: "pthread_mutex_lock(&mutex)", stopped: "pthread_exit", idle: "—"},
+};
+let run = -1, seq = 0, sim = null, nKey = "", logLines = [];
+
+function fmtLog(e){
+  const t = e.t.toFixed(3).padStart(7, " ");
+  const who = e.who.padEnd(3, " ");
+  const it = String(e.item).padStart(2, " ");
+  const tail = e.count === null || e.count === undefined ? "" : `   (buffer ${e.count}/${sim ? sim.slots.length : "?"})`;
+  return e.kind === "insert"
+    ? `[${t}s] <span class="p">producer ${who}</span> produced ${it} -> slot ${e.slot}${tail}`
+    : `[${t}s] <span class="c">consumer ${who}</span> consumed ${it} <- slot ${e.slot}${tail}`;
+}
+function addLog(html){
+  logLines.push(html);
+  if (logLines.length > 600) logLines.splice(0, logLines.length - 600);
+}
+function flushLog(){
+  const pre = $("#log");
+  pre.innerHTML = logLines.join("\n");
+  if ($("#follow").checked) pre.scrollTop = pre.scrollHeight;
+}
+
+function build(s){
+  const n = s.slots.length, cols = `repeat(${n}, minmax(0,1fr))`;
+  for (const id of ["#outRow", "#cells", "#idxRow", "#inRow"]) $(id).style.gridTemplateColumns = cols;
+  $("#cells").innerHTML = s.slots.map(() => `<div class="cell"></div>`).join("");
+  $("#idxRow").innerHTML = s.slots.map((_, i) => `<div class="idx">[${i}]</div>`).join("");
+  $("#outRow").innerHTML = s.slots.map(() => `<div class="ptr out"></div>`).join("");
+  $("#inRow").innerHTML = s.slots.map(() => `<div class="ptr in"></div>`).join("");
+  $("#threads").innerHTML = Object.keys(s.states).map(k =>
+    `<tr data-k="${k}"><td class="m"><b>${k}</b> <span style="color:var(--muted)">${k[0] === "P" ? "producer" : "consumer"}</span></td><td class="st"></td><td class="m"></td></tr>`).join("");
+  nKey = n + "|" + Object.keys(s.states).join(",");
+}
+
+function render(s){
+  sim = s;
+  const live = s && !s.stopped;
+  $("#bStart").disabled = !!live;
+  for (const id of ["#bPause", "#bStep", "#bStop"]) $(id).disabled = !live;
+  $("#bPause").textContent = s && s.paused && live ? "Resume" : "Pause";
+  for (const id of ["#size", "#prod", "#cons", "#paused"]) $(id).disabled = !!live;
+  if (!s){
+    $("#dot").className = "dot"; $("#stText").textContent = "ажиллаагүй"; $("#t").textContent = "0.00";
+    return;
+  }
+  if (nKey !== s.slots.length + "|" + Object.keys(s.states).join(",")) build(s);
+  $("#dot").className = "dot " + (s.stopped ? "stop" : s.paused ? "pause" : "run");
+  $("#stText").textContent = s.stopped ? "зогссон (бүх thread join хийгдсэн)" : s.paused ? "түр зогссон" : "ажиллаж байна";
+  $("#t").textContent = s.elapsed.toFixed(2);
+  $("#spd").textContent = s.speed + "×";
+
+  const n = s.slots.length;
+  document.querySelectorAll("#cells .cell").forEach((el, i) => {
+    const v = s.slots[i];
+    el.textContent = v === null ? "" : v;
+    el.classList.toggle("full", v !== null);
+    el.classList.toggle("last", i === s.last);
+  });
+  document.querySelectorAll("#outRow .ptr").forEach((el, i) => el.textContent = i === s.out_idx ? "out ↓" : "");
+  document.querySelectorAll("#inRow .ptr").forEach((el, i) => el.textContent = i === s.in_idx ? "↑ in" : "");
+  const count = s.slots.filter(x => x !== null).length;
+  $("#decl").textContent = `buffer_item buffer[${n}];   in = ${s.in_idx},  out = ${s.out_idx},  count = ${count}`;
+
+  $("#vEmpty").textContent = s.empty; $("#vEmpty").classList.toggle("zero", s.empty === 0);
+  $("#vFull").textContent = s.full;   $("#vFull").classList.toggle("zero", s.full === 0);
+  $("#vMutex").textContent = s.mutex_locked ? "locked" : "free";
+  $("#vMutex").style.color = s.mutex_locked ? "var(--red)" : "var(--green)";
+  $("#vProd").textContent = s.produced; $("#vCons").textContent = s.consumed;
+
+  const inv1 = s.produced - s.consumed === count;
+  $("#vInv1").textContent = `${s.produced} − ${s.consumed} = ${s.produced - s.consumed}`;
+  $("#cInv1").textContent = `буферт ${count} ` + (inv1 ? "✓" : (s.stopped ? "✗" : "…"));
+  $("#cInv1").className = inv1 ? "ok" : (s.stopped ? "no" : "");
+  const inv2 = s.empty + s.full === n;
+  $("#vInv2").textContent = `${s.empty} + ${s.full} = ${s.empty + s.full}`;
+  $("#cInv2").textContent = inv2 ? `${n} ✓` : "шилжилтийн мөч";
+  $("#cInv2").className = inv2 ? "ok" : "";
+
+  document.querySelectorAll("#threads tr").forEach(tr => {
+    const k = tr.dataset.k, st = s.states[k] || "idle", side = k[0];
+    let where = WHERE[side][st] || "";
+    if (st === "waiting") where = (side === "P" ? s.empty : s.full) === 0 ? WHERE[side].wsem : WHERE[side].lock;
+    tr.className = st === "waiting" ? "waiting" : "";
+    const stc = tr.children[1], wc = tr.children[2];
+    stc.className = "st " + st; stc.textContent = st;
+    wc.textContent = where;
+  });
+}
+
+async function poll(){
+  try{
+    const r = await fetch(API + "/state?since=" + seq, {cache: "no-store"});
+    const d = await r.json();
+    if (r.status === 503){ showErr("C програм ажиллахгүй байна: " + d.error); setTimeout(poll, 2000); return; }
+    if (d.run !== run){ run = d.run; logLines = []; nKey = ""; sim = null; }
+    if (d.sim && !sim) addLog(`<span class="h">$ ./producer_consumer --ui ${d.sim.slots.length} ${d.config ? d.config.prod + " " + d.config.cons + " " + d.config.psleep + " " + d.config.csleep : ""}</span>`);
+    sim = d.sim;
+    for (const e of d.events) addLog(fmtLog(e));
+    if (d.sim && d.sim.stopped && !logLines.some(l => l.includes("CONSISTENT"))){
+      const c = d.sim.slots.filter(x => x !== null).length, ok = d.sim.produced - d.sim.consumed === c;
+      addLog(`\n<span class="h">produced=${d.sim.produced} consumed=${d.sim.consumed} in_buffer=${c} -> ${ok ? "CONSISTENT" : "INCONSISTENT"}</span>`);
+    }
+    if (d.events.length || d.sim) flushLog();
+    seq = d.seq;
+    render(d.sim);
+  }catch(e){ /* retry */ }
+  setTimeout(poll, 100);
+}
+
+function showErr(msg){ const e = $("#err"); e.textContent = msg; e.style.display = msg ? "block" : "none"; }
+async function api(action, body){
+  try{
+    const r = await fetch(API + "/" + action, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok){ showErr(d.error || "Алдаа"); return false; }
+    showErr(""); return true;
+  }catch(e){ showErr("Сервертэй холбогдож чадсангүй (gui.py ажиллаж байгаа эсэхийг шалгана уу)"); return false; }
+}
+const val = id => $(id).value;
+$("#bStart").onclick = () => api("start", {size: val("#size"), prod: val("#prod"), cons: val("#cons"),
+  psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed"), paused: $("#paused").checked});
+$("#bPause").onclick = () => api(sim && sim.paused ? "resume" : "pause");
+$("#bStep").onclick = () => api("step");
+$("#bStop").onclick = () => api("stop");
+$("#bReset").onclick = async () => { if (await api("reset")){ logLines = []; flushLog(); } };
+let tuneT;
+for (const id of ["#psleep", "#csleep", "#speed"]) $(id).addEventListener("input", () => {
+  if (!sim || sim.stopped) return;
+  clearTimeout(tuneT);
+  tuneT = setTimeout(() => api("tune", {psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed")}), 150);
+});
+poll();
+</script>
+</body>
+</html>

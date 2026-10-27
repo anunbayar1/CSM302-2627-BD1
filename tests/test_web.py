@@ -13,9 +13,25 @@ import gui  # noqa: E402
 
 
 class TestWebUI(unittest.TestCase):
+    """Runs against the C/Pthreads engine (src/c), which the UI uses by default."""
+    ENGINE = "c"
+    PREFIX = "/api/c"
+
+    @classmethod
+    def make_ctl(cls):
+        return gui.CController()
+
     @classmethod
     def setUpClass(cls):
-        cls.srv, cls.ctl = gui.serve("127.0.0.1", 0)
+        if cls.ENGINE == "c":
+            try:
+                gui.build_c_engine()
+            except RuntimeError as e:
+                raise unittest.SkipTest(str(e))
+        cls.ctl = cls.make_ctl()
+        ctls = {"py": None, "c": None}
+        ctls["c" if cls.ENGINE == "c" else "py"] = cls.ctl
+        cls.srv, _ = gui.serve("127.0.0.1", 0, ctls)
         cls.base = f"http://127.0.0.1:{cls.srv.server_address[1]}"
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
 
@@ -26,6 +42,7 @@ class TestWebUI(unittest.TestCase):
         cls.srv.server_close()
 
     def post(self, path, body=None):
+        path = path.replace("/api", self.PREFIX, 1)
         req = urllib.request.Request(self.base + path, data=json.dumps(body or {}).encode(),
                                      headers={"Content-Type": "application/json"}, method="POST")
         try:
@@ -35,16 +52,24 @@ class TestWebUI(unittest.TestCase):
             return e.code, json.loads(e.read())
 
     def state(self, since=0):
-        with urllib.request.urlopen(f"{self.base}/api/state?since={since}") as r:
+        with urllib.request.urlopen(f"{self.base}{self.PREFIX}/state?since={since}") as r:
             return json.loads(r.read())
 
     def tearDown(self):
         self.post("/api/reset")
 
-    def test_page_served(self):
-        with urllib.request.urlopen(self.base + "/") as r:
-            self.assertEqual(r.status, 200)
-            self.assertIn("Шуудангийн хайрцаг".encode(), r.read())
+    def test_pages_served(self):
+        for path, text in [("/", "Producer–Consumer"), ("/mail", "Шуудангийн хайрцаг"),
+                           ("/raw", "Pthreads")]:
+            with urllib.request.urlopen(self.base + path) as r:
+                self.assertEqual(r.status, 200)
+                self.assertIn(text.encode(), r.read(), path)
+
+    def test_other_engine_missing_is_503(self):
+        other = "/api/py" if self.ENGINE == "c" else "/api/c"
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            urllib.request.urlopen(self.base + other + "/state")
+        self.assertEqual(cm.exception.code, 503)
 
     def test_run_events_and_consistency(self):
         code, _ = self.post("/api/start", dict(size=3, prod=3, cons=2, psleep=0.05, csleep=0.05))
@@ -129,6 +154,25 @@ class TestWebUI(unittest.TestCase):
         self.post("/api/start", dict(size=5, prod=1, cons=1, psleep=0.1, csleep=0.1))
         self.post("/api/reset")
         self.assertIsNone(self.state()["sim"])
+
+
+    def test_engine_reported(self):
+        self.post("/api/start", dict(size=4, prod=1, cons=1, psleep=0.1, csleep=0.1))
+        time.sleep(0.3)
+        sim = self.state()["sim"]
+        self.assertEqual(sim["engine"], self.ENGINE)
+        self.assertEqual(len(sim["slots"]), 4)
+        self.assertEqual(set(sim["states"]), {"P1", "C1"})
+
+
+class TestWebUIPython(TestWebUI):
+    """The same API tests against the Python port (python3 src/gui.py --engine python)."""
+    ENGINE = "python"
+    PREFIX = "/api/py"
+
+    @classmethod
+    def make_ctl(cls):
+        return gui.Controller()
 
 
 if __name__ == "__main__":

@@ -38,7 +38,9 @@ small{color:var(--muted);font-weight:500}
 /* ---------- header ---------- */
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
 .brand{display:flex;align-items:center;gap:12px}
-.brandic{display:grid}.brandic svg{width:40px;height:40px;flex:none}
+.brandic{display:grid}
+.homelink{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;text-decoration:none;color:var(--ink);border:1px solid var(--line);font-weight:700;font-size:18px}
+.homelink:hover{background:var(--accent-soft);border-color:var(--accent)}.brandic svg{width:40px;height:40px;flex:none}
 .brand h1{font-size:19px;margin:0;letter-spacing:-.01em}
 .brand p{margin:0;font-size:12.5px;color:var(--muted)}
 .top-right{display:flex;align-items:center;gap:10px}
@@ -220,6 +222,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .speedends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px}
 .speedtag{font:700 13px ui-monospace,monospace;color:var(--accent);background:var(--accent-soft);padding:5px 9px;border-radius:999px}
 .speedtag.blink{animation:blink .6s}
+.enginetag{font:700 12px ui-monospace,monospace;color:var(--green);background:var(--green-soft);padding:5px 9px;border-radius:999px;white-space:nowrap}
+.enginetag.py{color:var(--amber);background:var(--amber-soft)}
 @keyframes blink{0%{box-shadow:0 0 0 0 var(--accent)}100%{box-shadow:0 0 0 10px transparent}}
 /* waiting queues */
 .queue{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px;color:var(--muted);min-height:34px}
@@ -318,6 +322,7 @@ td code{font-size:12px}
 
 <header class="top">
   <div class="brand">
+    <a href="/" class="homelink" title="Нүүр хуудас" aria-label="Нүүр хуудас">←</a>
     <span id="brandIc" class="brandic"></span>
     <div>
       <h1 data-t="title">Шуудангийн хайрцаг</h1>
@@ -328,6 +333,7 @@ td code{font-size:12px}
     <span id="chip" class="chip">Хаалттай</span>
     <span id="clock" class="clock">0.0 с</span>
     <span id="speedTag" class="speedtag" title="Хурд">1×</span>
+    <span id="engineTag" class="enginetag" title="Дэлгэцэн дээрх thread-үүдийг ажиллуулж буй програм" hidden></span>
     <button id="tourBtn" class="btn tour">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
       Дуут тайлбар
@@ -507,6 +513,7 @@ td code{font-size:12px}
 
 <script>
 "use strict";
+const API = "/api/py";              // this page runs the Python engine (bounded_buffer.py)
 const $ = s => document.querySelector(s);
 /* ---------- examples (themes): every word that depends on the story lives here ---------- */
 const THEMES = {
@@ -716,7 +723,7 @@ function liveTune(){
   clearTimeout(tuneTimer);
   tuneTimer = setTimeout(async () => {
     const body = {psleep: inputs.psleep.num.value, csleep: inputs.csleep.num.value};
-    if (await api("/api/tune", body)) flashLive();
+    if (await api(API + "/tune", body)) flashLive();
   }, 150);
 }
 function setSpeed(i, announce){
@@ -726,7 +733,7 @@ function setSpeed(i, announce){
   $("#speedVal").textContent = fmtSpeed(speed);
   $("#speedTag").textContent = fmtSpeed(speed);
   document.querySelectorAll(".ticks span").forEach((t, j) => t.classList.toggle("on", j === i));
-  if (isLive()) api("/api/tune", {speed}).then(ok => { if (ok && announce) toast("Хурд: " + fmtSpeed(speed)); });
+  if (isLive()) api(API + "/tune", {speed}).then(ok => { if (ok && announce) toast("Хурд: " + fmtSpeed(speed)); });
   else if (announce) toast("Хурд: " + fmtSpeed(speed) + " (эхлүүлэхэд хэрэглэгдэнэ)");
 }
 function fmtSpeed(x){ return (x === 0.25 ? "¼" : x === 0.5 ? "½" : String(x)) + "×"; }
@@ -800,6 +807,10 @@ function render(d){
   }
   if (layoutKey !== s.slots.length + "|" + Object.keys(s.states).join(",")) buildLayout(s);
 
+  const et = $("#engineTag");
+  et.hidden = false;
+  et.textContent = s.engine === "c" ? "C · Pthreads" : "Python";
+  et.classList.toggle("py", s.engine !== "c");
   chip.className = "chip " + (s.stopped ? "stop" : s.paused ? "pause" : "run");
   chip.textContent = s.stopped ? "Зогссон" : s.paused ? "Түр зогссон" : "Ажиллаж байна";
   $("#clock").textContent = s.elapsed.toFixed(1) + " с";
@@ -966,14 +977,14 @@ function helpHTML(){
     </div>
     <p style="margin:0 0 16px;font-size:14px">Хамгийн түрүүнд ${T.putPast} ${T.itemAcc} хамгийн түрүүнд авна (<b>FIFO</b>). Сүүлийн ${T.slotDat} хүрвэл дахиад эхний ${T.slotAbl} эхэлнэ (<b>дугуй дараалал</b>, <code>(i + 1) % size</code>). Эдгээр дүрмийг сахивал ${T.item} хэзээ ч алга болохгүй, давхардахгүй.</p>
     <table>
-      <thead><tr><th>Жишээнд</th><th>Үйлдлийн системд</th><th>Манай кодонд</th></tr></thead>
+      <thead><tr><th>Жишээнд</th><th>Үйлдлийн системд</th><th>Python кодонд (bounded_buffer.py)</th></tr></thead>
       <tbody>
         <tr><td>${T.prod}</td><td>Producer thread</td><td><code>Worker(kind="producer")</code></td></tr>
         <tr><td>${T.cons}</td><td>Consumer thread</td><td><code>Worker(kind="consumer")</code></td></tr>
         <tr><td>${T.box}</td><td>Bounded buffer</td><td><code>BoundedBuffer.slots[]</code></td></tr>
         <tr><td>Дугаартай ${T.item}</td><td>Item</td><td><code>random.randint(1, 99)</code></td></tr>
-        <tr><td>Сул ${T.slotGen} тоо</td><td>empty semaphore</td><td><code>Semaphore(size)</code></td></tr>
-        <tr><td>${T.boxIn[0].toUpperCase() + T.boxIn.slice(1)} ${T.itemGen} тоо</td><td>full semaphore</td><td><code>Semaphore(0)</code></td></tr>
+        <tr><td>Сул ${T.slotGen} тоо</td><td>empty semaphore</td><td><code>threading.Semaphore(size)</code></td></tr>
+        <tr><td>${T.boxIn[0].toUpperCase() + T.boxIn.slice(1)} ${T.itemGen} тоо</td><td>full semaphore</td><td><code>threading.Semaphore(0)</code></td></tr>
         <tr><td>Түлхүүр</td><td>mutex lock</td><td><code>threading.Lock()</code></td></tr>
         <tr><td>${T.itemC} ${T.putInf} / авах</td><td>insert_item / remove_item</td><td>0 эсвэл -1 буцаана</td></tr>
         <tr><td>Хүлээх</td><td>Semaphore дээр блоклогдох</td><td><code>sem.acquire()</code></td></tr>
@@ -1051,16 +1062,16 @@ window.addEventListener("resize", placeSpot); window.addEventListener("scroll", 
 
 const ACTS = {
   async start(){
-    if (sim && !sim.stopped) await api("/api/stop");
-    await api("/api/reset");
+    if (sim && !sim.stopped) await api(API + "/stop");
+    await api(API + "/reset");
     setValues(PRESETS[0].v); $("#stepMode").checked = false; setSpeed(2, false);
-    await api("/api/start", readValues());
+    await api(API + "/start", readValues());
     $("#narr").textContent = T.opened;
   },
-  async fill(){ if (!isLive()) await ACTS.start(); setValues({psleep:0.2, csleep:3}); await api("/api/tune", {psleep:0.2, csleep:3}); },
-  async drain(){ if (!isLive()) await ACTS.start(); setValues({psleep:3, csleep:0.2}); await api("/api/tune", {psleep:3, csleep:0.2}); },
-  async speed(){ if (!isLive()) await ACTS.start(); setValues({psleep:1, csleep:1}); await api("/api/tune", {psleep:1, csleep:1}); setSpeed(3, false); },
-  async stop(){ if (isLive()) await api("/api/stop"); setSpeed(2, false); },
+  async fill(){ if (!isLive()) await ACTS.start(); setValues({psleep:0.2, csleep:3}); await api(API + "/tune", {psleep:0.2, csleep:3}); },
+  async drain(){ if (!isLive()) await ACTS.start(); setValues({psleep:3, csleep:0.2}); await api(API + "/tune", {psleep:3, csleep:0.2}); },
+  async speed(){ if (!isLive()) await ACTS.start(); setValues({psleep:1, csleep:1}); await api(API + "/tune", {psleep:1, csleep:1}); setSpeed(3, false); },
+  async stop(){ if (isLive()) await api(API + "/stop"); setSpeed(2, false); },
 };
 
 async function playStep(){
@@ -1141,7 +1152,7 @@ $("#tbPlay").onclick = () => {
 /* ---------- polling loop ---------- */
 async function poll(){
   try{
-    const r = await fetch("/api/state?since=" + seq, {cache: "no-store"});
+    const r = await fetch(API + "/state?since=" + seq, {cache: "no-store"});
     const d = await r.json();
     if (d.run !== run){ run = d.run; resetView(); }
     for (const e of d.events) handleEvent(e);
@@ -1160,16 +1171,16 @@ document.querySelectorAll(".ticks span").forEach((t, i) => t.onclick = () => set
 $("#bStart").onclick = async () => {
   const bad = document.querySelector(".num.bad");
   if (bad){ toast("Улаанаар тэмдэглэсэн утгыг засна уу. Зөвшөөрөгдөх хязгаарыг нэрийн доор бичсэн.", true); bad.focus(); return; }
-  if (await api("/api/start", readValues())){
+  if (await api(API + "/start", readValues())){
     toast($("#stepMode").checked ? "Алхам алхмаар горим: «Нэг алхам» дарна уу." : T.started);
     $("#narr").textContent = T.opened;
   }
 };
-$("#bPause").onclick = () => api(sim && sim.paused ? "/api/resume" : "/api/pause");
-$("#bStep").onclick = () => api("/api/step");
-$("#bStop").onclick = () => api("/api/stop");
+$("#bPause").onclick = () => api(sim && sim.paused ? API + "/resume" : API + "/pause");
+$("#bStep").onclick = () => api(API + "/step");
+$("#bStop").onclick = () => api(API + "/stop");
 $("#bReset").onclick = async () => {
-  if (await api("/api/reset")){
+  if (await api(API + "/reset")){
     setValues(Object.fromEntries(FIELDS.map(f => [f.key, f.def]))); clearPreset();
     $("#stepMode").checked = false;
     setSpeed(2, false);

@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 """Web UI for the Producer-Consumer (bounded buffer) simulation.
 
-Only the Python standard library is used: a small local HTTP server drives the
-real threads in bounded_buffer.py, and the browser page (ui/index.html) draws
-them as a mailbox: senders (producers) put letters into the mailbox (buffer),
-receivers (consumers) take them out.
+A small standard-library HTTP server with three pages:
 
-    python3 src/gui.py                 # opens http://127.0.0.1:8765
+    /       home page: choose one of the two views
+    /mail   Python engine (bounded_buffer.py) drawn as a mailbox, with voice tour
+    /raw    C/Pthreads engine (src/c, `producer_consumer --ui`) shown plainly:
+            buffer, semaphore values, thread states and the program's own log
+
+API: /api/py/<action> and /api/c/<action>  (state, start, pause, resume, step,
+tune, stop, reset). Both engines can run at the same time.
+
+    python3 src/gui.py                  # opens http://127.0.0.1:8765
     python3 src/gui.py --port 9000 --no-browser
 """
 import argparse
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -21,20 +28,23 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bounded_buffer import Simulation  # noqa: E402
+from bounded_buffer import Simulation, validate_params  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.realpath(os.path.join(HERE, "ui"))
-INDEX = os.path.join(UI_DIR, "index.html")
+PAGES = {"/": "home.html", "/index.html": "home.html", "/mail": "mail.html", "/raw": "raw.html"}
 MAX_EVENTS = 5000
+C_DIR = os.path.join(HERE, "c")
+C_BIN = os.path.join(C_DIR, "producer_consumer")
+C_SOURCES = ("main.c", "buffer.c", "ui.c", "buffer.h", "sim.h", "Makefile")
 
 # validate_params() speaks English; the UI speaks Mongolian.
 FIELD_MN = {
-    "Buffer size": "Хайрцгийн нүдний тоо (buffer size)",
-    "Producers": "Илгээгчийн тоо (producers)",
-    "Consumers": "Хүлээн авагчийн тоо (consumers)",
-    "Producer max sleep": "Илгээгчийн амралт",
-    "Consumer max sleep": "Хүлээн авагчийн амралт",
+    "Buffer size": "Буферийн хэмжээ (buffer size)",
+    "Producers": "Producer-ийн тоо",
+    "Consumers": "Consumer-ийн тоо",
+    "Producer max sleep": "Producer-ийн амралт (sleep)",
+    "Consumer max sleep": "Consumer-ийн амралт (sleep)",
     "Speed": "Хурд",
 }
 
@@ -52,8 +62,192 @@ def to_mongolian(msg):
     return msg
 
 
+def build_c_engine():
+    """Compile src/c with make when the binary is missing or older than the sources."""
+    srcs = [os.path.join(C_DIR, f) for f in C_SOURCES]
+    if os.path.isfile(C_BIN) and os.path.getmtime(C_BIN) >= max(map(os.path.getmtime, srcs)):
+        return C_BIN
+    if not shutil.which("make") or not (shutil.which("gcc") or shutil.which("cc")):
+        raise RuntimeError("gcc/make олдсонгүй (sudo apt install build-essential)")
+    r = subprocess.run(["make", "-s"], cwd=C_DIR, capture_output=True, text=True)
+    if r.returncode != 0 or not os.path.isfile(C_BIN):
+        raise RuntimeError("C програмыг хөрвүүлж чадсангүй:\n" + r.stderr.strip())
+    return C_BIN
+
+
+def check_params(cfg):
+    """Validate the form values (Mongolian messages); returns the cleaned numbers."""
+    try:
+        size, p, c, ps, cs = validate_params(cfg.get("size"), cfg.get("prod"), cfg.get("cons"),
+                                             cfg.get("psleep"), cfg.get("csleep"))
+        sp = check_speed(cfg.get("speed", 1))
+    except ValueError as e:
+        raise ValueError(to_mongolian(str(e)))
+    return size, p, c, ps, cs, sp
+
+
+def check_speed(v):
+    try:
+        sp = float(str(v).strip())
+    except ValueError:
+        raise ValueError(f"Speed must be a number (got {v!r}).")
+    if not 0.25 <= sp <= 4:
+        raise ValueError(f"Speed must be between 0.25 and 4.0 (got {sp}).")
+    return sp
+
+
+class CController:
+    """Runs the C/Pthreads program in --ui mode and relays its output to the page."""
+
+    def __init__(self):
+        self.lock = threading.Lock()      # guards proc / run bookkeeping
+        self.ev_lock = threading.Lock()   # guards snap / events (written by the reader thread)
+        self.proc = None
+        self.reader = None
+        self.snap = None
+        self.events = []
+        self.seq = 0
+        self.run_id = 0
+        self.config = None
+
+    def _alive(self):
+        return self.proc is not None and self.proc.poll() is None
+
+    def start(self, cfg):
+        with self.lock:
+            if self._alive():
+                raise ValueError("Симуляци ажиллаж байна. Эхлээд «Зогсоох» дарна уу.")
+            size, p, c, ps, cs, sp = check_params(cfg)
+            paused = bool(cfg.get("paused"))
+            build_c_engine()
+            proc = subprocess.Popen(
+                [C_BIN, "--ui", str(size), str(p), str(c), repr(ps), repr(cs), repr(sp),
+                 "1" if paused else "0"],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, bufsize=1)
+            names = [f"P{i + 1}" for i in range(p)] + [f"C{i + 1}" for i in range(c)]
+            with self.ev_lock:
+                self.events = []
+                self.snap = dict(engine="c", slots=[None] * size, in_idx=0, out_idx=0, last=None,
+                                 empty=size, full=0, mutex_locked=False,
+                                 states={n: "idle" for n in names}, produced=0, consumed=0,
+                                 paused=paused, stopped=False, speed=sp, prod_sleep=ps,
+                                 cons_sleep=cs, elapsed=0.0)
+                self.proc = proc
+            self.run_id += 1
+            self.config = dict(size=size, prod=p, cons=c, psleep=ps, csleep=cs)
+            self.reader = threading.Thread(target=self._read, args=(proc,), daemon=True)
+            self.reader.start()
+
+    def _read(self, proc):
+        """Parse the C program's stdout: E (event), S (state), END."""
+        for line in proc.stdout:
+            if line.startswith("E "):
+                parts = line.split()
+                if len(parts) not in (6, 7):
+                    continue
+                _, kind, who, slot, item, t = parts[:6]
+                count = int(parts[6]) if len(parts) == 7 else None
+                with self.ev_lock:
+                    if proc is not self.proc:
+                        continue
+                    self.seq += 1
+                    self.events.append(dict(seq=self.seq, kind="insert" if kind == "I" else "remove",
+                                            who=who, slot=int(slot), item=int(item), t=float(t),
+                                            count=count))
+                    if len(self.events) > MAX_EVENTS:
+                        del self.events[:-MAX_EVENTS]
+            elif line.startswith("S "):
+                try:
+                    snap = json.loads(line[2:])
+                except ValueError:
+                    continue
+                with self.ev_lock:
+                    if proc is self.proc:
+                        self.snap = snap
+
+    def _send(self, cmd):
+        proc = self.proc
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.stdin.write(cmd + "\n")
+                proc.stdin.flush()
+            except (BrokenPipeError, OSError, ValueError):
+                pass
+
+    def _patch(self, **kw):           # show the change at once; the next S line confirms it
+        with self.ev_lock:
+            if self.snap is not None and not self.snap.get("stopped"):
+                self.snap.update(kw)
+
+    def pause(self):
+        self._send("pause"); self._patch(paused=True)
+
+    def resume(self):
+        self._send("resume"); self._patch(paused=False)
+
+    def step(self):
+        self._send("step"); self._patch(paused=True)
+
+    def tune(self, cfg):
+        if not self._alive():
+            raise ValueError("Симуляци ажиллаагүй байна.")
+        cur = self.config
+        ps, cs, sp = cfg.get("psleep"), cfg.get("csleep"), cfg.get("speed")
+        try:
+            _, _, _, ps2, cs2 = validate_params(cur["size"], cur["prod"], cur["cons"],
+                                                cur["psleep"] if ps is None else ps,
+                                                cur["csleep"] if cs is None else cs)
+            sp2 = None if sp is None else check_speed(sp)
+        except ValueError as e:
+            raise ValueError(to_mongolian(str(e)))
+        self._send(f"tune {ps2!r} {cs2!r} {'-' if sp2 is None else repr(sp2)}")
+        cur.update(psleep=ps2, csleep=cs2)
+        patch = dict(prod_sleep=ps2, cons_sleep=cs2)
+        if sp2 is not None:
+            patch["speed"] = sp2
+        self._patch(**patch)
+
+    def stop(self):
+        proc, reader = self.proc, self.reader
+        if proc is None or proc.poll() is not None:
+            return
+        self._send("stop")
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        if reader:
+            reader.join(timeout=2)    # make sure the final snapshot has been read
+        self._patch(stopped=True)
+
+    def reset(self):
+        self.stop()
+        with self.lock:
+            with self.ev_lock:
+                self.proc = None
+                self.snap = None
+                self.events = []
+            self.config = None
+            self.run_id += 1
+
+    def state(self, since=0):
+        with self.lock:
+            run, cfg = self.run_id, self.config
+        with self.ev_lock:
+            if self.proc is None or self.snap is None:
+                return dict(run=run, seq=self.seq, sim=None, events=[], config=None)
+            snap = dict(self.snap)
+            if self.proc.poll() is not None:
+                snap["stopped"] = True
+            events = [e for e in self.events if e["seq"] > since]
+            seq = self.seq
+        return dict(run=run, seq=seq, sim=snap, events=events, config=cfg)
+
+
 class Controller:
-    """Owns the current Simulation and the list of buffer events for the page."""
+    """Same interface, but runs the Python port of the algorithm (bounded_buffer.py)."""
 
     def __init__(self):
         self.lock = threading.Lock()     # guards sim / run bookkeeping
@@ -160,6 +354,7 @@ class Controller:
             return dict(run=run, seq=self.seq, sim=None, events=[], config=None)
         snap = sim.snapshot()
         snap.pop("log", None)
+        snap["engine"] = "python"
         end = self.stopped_at if snap["stopped"] and self.stopped_at else time.monotonic()
         snap["elapsed"] = round(end - sim.t0, 2) if sim.t0 else 0.0
         with self.ev_lock:
@@ -168,7 +363,11 @@ class Controller:
         return dict(run=run, seq=seq, sim=snap, events=events, config=cfg)
 
 
-def make_handler(ctl):
+API = re.compile(r"^/api/(py|c)/(\w+)$")
+
+
+def make_handler(ctls, c_error=""):
+    """ctls = {"py": Controller, "c": CController or None}."""
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):  # keep the terminal quiet
             pass
@@ -197,14 +396,24 @@ def make_handler(ctl):
             with open(full, "rb") as f:
                 self._send(200, f.read(), types[ext])
 
+        def _ctl(self, engine):
+            ctl = ctls.get(engine)
+            if ctl is None:
+                self._json(503, {"error": c_error or "C хөдөлгүүр бэлэн биш байна."})
+            return ctl
+
         def do_GET(self):
             path, _, query = self.path.partition("?")
-            if path in ("/", "/index.html"):
-                with open(INDEX, "rb") as f:
+            m = API.match(path)
+            if path in PAGES:
+                with open(os.path.join(UI_DIR, PAGES[path]), "rb") as f:
                     self._send(200, f.read(), "text/html; charset=utf-8")
             elif path == "/tour.json" or path.startswith("/voice/"):
                 self._static(path)
-            elif path == "/api/state":
+            elif m and m.group(2) == "state":
+                ctl = self._ctl(m.group(1))
+                if ctl is None:
+                    return
                 try:
                     since = int(parse_qs(query).get("since", ["0"])[0])
                 except ValueError:
@@ -214,35 +423,57 @@ def make_handler(ctl):
                 self._json(404, {"error": "not found"})
 
         def do_POST(self):
-            actions = {"/api/pause": ctl.pause, "/api/resume": ctl.resume,
-                       "/api/step": ctl.step, "/api/stop": ctl.stop, "/api/reset": ctl.reset}
+            m = API.match(self.path)
+            if not m:
+                return self._json(404, {"error": "not found"})
+            ctl = self._ctl(m.group(1))
+            if ctl is None:
+                return
+            action = m.group(2)
+            simple = {"pause": ctl.pause, "resume": ctl.resume, "step": ctl.step,
+                      "stop": ctl.stop, "reset": ctl.reset}
             try:
                 n = int(self.headers.get("Content-Length") or 0)
                 data = json.loads(self.rfile.read(n) or b"{}") if n else {}
-                if self.path == "/api/start":
-                    ctl.start(data if isinstance(data, dict) else {})
-                elif self.path == "/api/tune":
-                    ctl.tune(data if isinstance(data, dict) else {})
-                elif self.path in actions:
-                    actions[self.path]()
+                data = data if isinstance(data, dict) else {}
+                if action == "start":
+                    ctl.start(data)
+                elif action == "tune":
+                    ctl.tune(data)
+                elif action in simple:
+                    simple[action]()
                 else:
                     return self._json(404, {"error": "not found"})
                 self._json(200, {"ok": True})
             except ValueError as e:      # includes bad JSON
                 self._json(400, {"error": str(e)})
+            except RuntimeError as e:    # C program could not be built / started
+                self._json(503, {"error": str(e)})
 
     return Handler
 
 
-def serve(host="127.0.0.1", port=8765, ctl=None):
+def make_controllers():
+    """Python engine always; C engine if it can be built (else None + the reason)."""
+    ctls, err = {"py": Controller(), "c": None}, ""
+    try:
+        build_c_engine()
+        ctls["c"] = CController()
+    except RuntimeError as e:
+        err = str(e)
+    return ctls, err
+
+
+def serve(host="127.0.0.1", port=8765, ctls=None, c_error=""):
     """Create the server; if the port is busy, try the next ones (port=0 → any free port)."""
-    ctl = ctl or Controller()
+    if ctls is None:
+        ctls, c_error = make_controllers()
     last = None
     for p in (range(port, port + 20) if port else [0]):
         try:
-            srv = ThreadingHTTPServer((host, p), make_handler(ctl))
+            srv = ThreadingHTTPServer((host, p), make_handler(ctls, c_error))
             srv.daemon_threads = True
-            return srv, ctl
+            return srv, ctls
         except OSError as e:
             last = e
     raise last
@@ -255,9 +486,12 @@ def main(argv=None):
     ap.add_argument("--no-browser", action="store_true", help="браузер автоматаар нээхгүй")
     args = ap.parse_args(argv)
 
-    srv, ctl = serve(args.host, args.port)
+    ctls, c_error = make_controllers()
+    srv, _ = serve(args.host, args.port, ctls, c_error)
     url = f"http://{args.host}:{srv.server_address[1]}/"
-    print(f"Шуудангийн хайрцаг ажиллаж байна: {url}")
+    print(f"Нүүр хуудас:            {url}")
+    print(f"  Python · шуудан:      {url}mail")
+    print(f"  C · Pthreads · шууд:  {url}raw" + ("" if ctls["c"] else f"   (ажиллахгүй: {c_error})"))
     print("Браузер нээгдэхгүй бол дээрх хаягийг өөрөө нээнэ үү. Зогсоох: Ctrl+C")
     if not args.no_browser:
         threading.Timer(0.6, webbrowser.open, args=(url,)).start()
@@ -266,7 +500,9 @@ def main(argv=None):
     except KeyboardInterrupt:
         print("\nХаалаа.")
     finally:
-        ctl.stop()
+        for ctl in ctls.values():
+            if ctl:
+                ctl.stop()
         srv.server_close()
 
 

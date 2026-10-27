@@ -9,17 +9,18 @@ CFLAGS  ?= -Wall -Wextra -O2 -std=c11 -D_DEFAULT_SOURCE
 LDFLAGS += -pthread
 BUFFER_SIZE ?= 5
 BIN     = producer_consumer
-SRC     = main.c buffer.c
+SRC     = main.c buffer.c ui.c
 
 $(BIN): $(SRC) buffer.h sim.h
-	$(CC) $(CFLAGS) -pthread -DBUFFER_SIZE=$(BUFFER_SIZE) -o $@ $(SRC) $(LDFLAGS)
+	$(CC) $(CFLAGS) -pthread -DBUFFER_SIZE=$(BUFFER_SIZE) -o $@ $(SRC) $(LDFLAGS) -lm
 
 run: $(BIN)
 	./$(BIN) 5 3 3
 
 tsan: $(SRC) buffer.h sim.h
-	$(CC) -g -O1 -std=c11 -D_DEFAULT_SOURCE -fsanitize=thread -pthread -DBUFFER_SIZE=$(BUFFER_SIZE) -o $(BIN)_tsan $(SRC)
+	$(CC) -g -O1 -std=c11 -D_DEFAULT_SOURCE -fsanitize=thread -pthread -DBUFFER_SIZE=$(BUFFER_SIZE) -o $(BIN)_tsan $(SRC) -lm
 	./$(BIN)_tsan -q 2 8 8 0.01
+	(printf 'tune 0.01 0.01 4\n'; sleep 1; printf 'pause\nstep\nstep\nresume\n'; sleep 1; printf 'stop\n') | ./$(BIN)_tsan --ui 3 6 6 1 1 1 0 | tail -1
 
 test: $(BIN)
 	@echo "== normal cases (must print CONSISTENT, exit 0)"

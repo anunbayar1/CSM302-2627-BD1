@@ -3,6 +3,7 @@
  * OS Concepts (10th ed.), Chapter 7, Programming Project 4 (Figures 7.15, 7.16).
  *
  * usage: ./producer_consumer [-q] <sleep_seconds> <producers> <consumers> [max_nap_seconds]
+ *        ./producer_consumer --ui ...   (engine for the web UI, see ui.c)
  *   sleep_seconds    how long main() sleeps before terminating  (book parameter 1)
  *   producers        number of producer threads                 (book parameter 2)
  *   consumers        number of consumer threads                 (book parameter 3)
@@ -20,44 +21,45 @@
 #include "buffer.h"
 #include "sim.h"
 
-#define MAX_THREADS 100
-
-static atomic_int running = 1;
+atomic_int  running = 1;
+atomic_long produced = 0, consumed = 0;          /* changed only under the buffer mutex */
+_Thread_local char me[16] = "main";
 static int quiet = 0;
+static int ui_mode = 0;
 static double max_nap = 1.0;
-static long produced = 0, consumed = 0;          /* changed only under the buffer mutex */
 static struct timespec t0;
+static int t0_set = 0;
 static pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int sim_running(void) { return atomic_load(&running); }
 
-static double elapsed(void)
+double elapsed(void)
 {
     struct timespec t;
+    if (!t0_set) { clock_gettime(CLOCK_MONOTONIC, &t0); t0_set = 1; }
     clock_gettime(CLOCK_MONOTONIC, &t);
     return (t.tv_sec - t0.tv_sec) + (t.tv_nsec - t0.tv_nsec) / 1e9;
 }
 
-/* each thread keeps its own name so the log shows who did what */
-static __thread char me[8] = "main";
-
 void sim_on_insert(buffer_item item, int slot, int count)
 {
-    produced++;
+    atomic_fetch_add(&produced, 1);
+    if (ui_mode) { ui_on_insert(item, slot, count); return; }
     if (quiet) return;
     pthread_mutex_lock(&print_lock);
     printf("[%7.3fs] producer %-3s produced %2d -> slot %d   (buffer %d/%d)\n",
-           elapsed(), me, item, slot, count, BUFFER_SIZE);
+           elapsed(), me, item, slot, count, buffer_capacity());
     pthread_mutex_unlock(&print_lock);
 }
 
 void sim_on_remove(buffer_item item, int slot, int count)
 {
-    consumed++;
+    atomic_fetch_add(&consumed, 1);
+    if (ui_mode) { ui_on_remove(item, slot, count); return; }
     if (quiet) return;
     pthread_mutex_lock(&print_lock);
     printf("[%7.3fs] consumer %-3s consumed %2d <- slot %d   (buffer %d/%d)\n",
-           elapsed(), me, item, slot, count, BUFFER_SIZE);
+           elapsed(), me, item, slot, count, buffer_capacity());
     pthread_mutex_unlock(&print_lock);
 }
 
@@ -138,6 +140,12 @@ static int parse_double(const char *s, double lo, double hi, double *out)
 
 int main(int argc, char *argv[])
 {
+    if (argc > 1 && strcmp(argv[1], "--ui") == 0) {   /* engine for the web UI */
+        ui_mode = 1;
+        clock_gettime(CLOCK_MONOTONIC, &t0); t0_set = 1;
+        return ui_main(argc - 2, argv + 2);
+    }
+
     /* 1. Get command line arguments */
     int a = 1;
     if (argc > 1 && strcmp(argv[1], "-q") == 0) { quiet = 1; a = 2; }
@@ -163,8 +171,8 @@ int main(int argc, char *argv[])
     }
 
     /* 2. Initialize buffer */
-    if (buffer_init() != 0) { perror("buffer_init"); return 1; }
-    clock_gettime(CLOCK_MONOTONIC, &t0);
+    if (buffer_init(BUFFER_SIZE) != 0) { perror("buffer_init"); return 1; }
+    clock_gettime(CLOCK_MONOTONIC, &t0); t0_set = 1;
     printf("BUFFER_SIZE=%d producers=%ld consumers=%ld run=%.2fs max_nap=%.2fs\n",
            BUFFER_SIZE, np, nc, run_s, max_nap);
 
@@ -195,7 +203,7 @@ int main(int argc, char *argv[])
     int left = buffer_count();
     int ok = produced - consumed == left;
     printf("\nproduced=%ld consumed=%ld in_buffer=%d -> %s\n",
-           produced, consumed, left, ok ? "CONSISTENT" : "INCONSISTENT");
+           (long)produced, (long)consumed, left, ok ? "CONSISTENT" : "INCONSISTENT");
     buffer_destroy();
     return ok ? 0 : 2;
 }
