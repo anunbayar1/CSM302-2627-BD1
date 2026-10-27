@@ -315,6 +315,78 @@ td code{font-size:12px}
   .code2,.story{grid-template-columns:1fr}
   .metrics{grid-template-columns:1fr}
 }
+/* ---------- fit the whole page into one screen on laptops / desktops ---------- */
+@media (min-width:1100px) and (min-height:620px){
+  html,body{height:100%}
+  body{overflow:hidden;display:flex;flex-direction:column}
+  .top{position:static;flex:none;padding:8px 20px}
+  .brand svg,.brandic svg{width:34px;height:34px}
+  .brand h1{font-size:17px}
+  .layout{flex:1;min-height:0;max-width:none;grid-template-columns:290px minmax(0,1fr);gap:12px;padding:10px 16px 12px}
+  .controls{gap:6px}
+  .controls .btn{font-size:13px;padding:8px 6px;min-width:0}
+  .controls .wide{padding:10px}
+  #fly{overflow:hidden}
+  .panel{min-height:0;overflow:auto;gap:10px;padding-right:2px}
+  .panel .card{padding:12px 14px}
+  .panel h2{margin-bottom:8px}
+  .field{margin-bottom:9px}
+  .speedbox{margin-top:10px;padding-top:10px}
+  .stage{min-height:0;display:grid;gap:10px;
+    grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1.25fr) auto minmax(0,1fr);
+    grid-template-areas:"narr narr" "scene scene" "metrics metrics" "code log"}
+  .narr{grid-area:narr;padding:9px 14px;gap:10px}
+  .narr-ic{width:32px;height:32px}
+  .narr-main{font-size:15.5px;min-height:22px}
+  .narr-hint{font-size:12.5px;min-height:17px}
+  .scene{grid-area:scene;min-height:0;padding:12px 14px;gap:14px;overflow:hidden}
+  .col{display:flex;flex-direction:column;min-height:0}
+  .col h3{margin-bottom:6px;font-size:14px}
+  .people{min-height:0;overflow:auto;gap:5px}
+  .person{padding:4px 8px 4px 4px}
+  .cons .person{padding:4px 4px 4px 8px}
+  .avatar{width:32px;height:32px} .avatar svg{width:28px;height:28px}
+  .boxwrap{justify-content:center;min-height:0}
+  .slot{height:clamp(40px,7vh,64px)}
+  .wrapnote{font-size:11.5px;margin-top:3px}
+  .metrics{grid-area:metrics;gap:10px}
+  .metric,.chart{padding:9px 12px}
+  .mval{font-size:26px;margin:2px 0 4px}
+  .dots i{width:8px;height:8px}
+  .mrule{margin-top:4px;font-size:11.5px}
+  .queue{margin-top:6px;padding-top:6px;min-height:24px;font-size:11.5px}
+  .lock{margin:2px 0}
+  .lock svg{width:34px;height:34px}
+  .chart svg{height:46px;margin-top:4px}
+  .stats{margin-top:4px;gap:12px}
+  .stats b{font-size:16px}
+  .codec{grid-area:code;min-height:0;display:flex;flex-direction:column;padding:10px 12px}
+  .codehead h3 small{display:none}
+  .code2{flex:1;min-height:0;margin-top:8px;gap:10px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .code li{overflow:hidden}
+  .code .src{flex:none}
+  .code .who{min-width:0;overflow:hidden;flex-shrink:1}
+  .code2 > div{display:flex;flex-direction:column;min-height:0}
+  .code{flex:1;min-height:0;overflow:auto;font-size:12px;padding:3px 0}
+  .code li{min-height:22px;padding:1px 8px;gap:6px}
+  .code .cm{font-size:11px}
+  .tchip{font-size:10.5px;padding:1px 6px}
+  .code-title{margin-bottom:4px;font-size:12.5px}
+  .logc{grid-area:log;min-height:0;display:flex;flex-direction:column;padding:10px 12px}
+  .logc .log{flex:1;min-height:0;max-height:none;margin-top:6px;font-size:12.5px}
+  .log li{padding:4px 2px}
+  .logc .result{margin:6px 0 0;padding:8px 10px;font-size:13px}
+}
+@media (min-width:1100px) and (max-width:1320px){
+  #helpBtn .hl{display:none}
+  .top-right{gap:8px}
+}
+@media (min-width:1100px) and (min-height:620px) and (max-height:820px){
+  .codeleg{display:none}
+  .chart svg{height:34px}
+  .metric .mrule{display:none}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
