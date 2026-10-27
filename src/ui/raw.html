@@ -461,6 +461,7 @@ async function poll(){
       dlLogged = false;
       addLog(`<span class="h">${cmd}</span>`, cmd);
     }
+    if (d.error) showErr(d.error);
     sim = d.sim;
     for (const e of d.events) onEvent(e);
     if (d.sim && d.sim.deadlock && !dlLogged && d.sim.owner){

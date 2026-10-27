@@ -62,14 +62,19 @@ def to_mongolian(msg):
     return msg
 
 
-def build_c_engine():
-    """Compile src/c with make when the binary is missing or older than the sources."""
+def build_c_engine(force=False):
+    """Compile src/c with make when the binary is missing or older than the sources.
+    force=True (server start) always rebuilds: files unpacked from a zip or a git checkout can
+    carry old timestamps, and an old binary would not understand the new options."""
     srcs = [os.path.join(C_DIR, f) for f in C_SOURCES]
-    if os.path.isfile(C_BIN) and os.path.getmtime(C_BIN) >= max(map(os.path.getmtime, srcs)):
+    have = os.path.isfile(C_BIN)
+    if have and not force and os.path.getmtime(C_BIN) >= max(map(os.path.getmtime, srcs)):
         return C_BIN
     if not shutil.which("make") or not (shutil.which("gcc") or shutil.which("cc")):
+        if have:
+            return C_BIN
         raise RuntimeError("gcc/make олдсонгүй (sudo apt install build-essential)")
-    r = subprocess.run(["make", "-s"], cwd=C_DIR, capture_output=True, text=True)
+    r = subprocess.run(["make", "-s"] + (["-B"] if force else []), cwd=C_DIR, capture_output=True, text=True)
     if r.returncode != 0 or not os.path.isfile(C_BIN):
         raise RuntimeError("C программыг хөрвүүлж чадсангүй:\n" + r.stderr.strip())
     return C_BIN
@@ -112,6 +117,7 @@ class CController:
         self.seq = 0
         self.run_id = 0
         self.config = None
+        self.error = ""
 
     def _alive(self):
         return self.proc is not None and self.proc.poll() is None
@@ -146,6 +152,7 @@ class CController:
                 self.proc = proc
             self.run_id += 1
             self.config = dict(size=size, prod=p, cons=c, psleep=ps, csleep=cs, bug=bug)
+            self.error = ""
             self.reader = threading.Thread(target=self._read, args=(proc,), daemon=True)
             self.reader.start()
 
@@ -176,6 +183,10 @@ class CController:
                 with self.ev_lock:
                     if proc is self.proc:
                         self.snap = snap
+
+        if proc is self.proc and proc.wait() > 0:       # ended by itself with an error
+            msg = (proc.stderr.read() or "").strip().splitlines()
+            self.error = "C программ алдаатай зогслоо: " + (msg[0] if msg else f"exit {proc.returncode}")
 
     def _send(self, cmd):
         proc = self.proc
@@ -254,7 +265,10 @@ class CController:
                 snap["stopped"] = True
             events = [e for e in self.events if e["seq"] > since]
             seq = self.seq
-        return dict(run=run, seq=seq, sim=snap, events=events, config=cfg)
+        out = dict(run=run, seq=seq, sim=snap, events=events, config=cfg)
+        if self.error:
+            out["error"] = self.error
+        return out
 
 
 class Controller:
@@ -468,7 +482,7 @@ def make_controllers():
     """Python engine always; C engine if it can be built (else None + the reason)."""
     ctls, err = {"py": Controller(), "c": None}, ""
     try:
-        build_c_engine()
+        build_c_engine(force=True)
         ctls["c"] = CController()
     except RuntimeError as e:
         err = str(e)
