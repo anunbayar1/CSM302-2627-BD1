@@ -113,7 +113,7 @@ py src\gui.py
 
 * Гадаад сан ашиглаагүй: C стандарт сан + POSIX Pthreads, Python стандарт сан, vanilla HTML / CSS / JavaScript.
 * Алгоритм нь сурах бичгийн 7.1.1-р хэсэг (Figures 7.1, 7.2) болон Programming Project 4-т үндэслэсэн.
-* **AI:** Claude (Anthropic)-г код, автомат тест, UI болон баримт бичиг (README) боловсруулахад ашигласан.
+* **AI:** Claude (Anthropic)-г код, тест, UI боловсруулахад ашигласан.
 
 ## Мэдэгдэж буй хязгаарлалт
 
