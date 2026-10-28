@@ -125,7 +125,7 @@ class CController:
     def start(self, cfg):
         with self.lock:
             if self._alive():
-                raise ValueError("Симуляци ажиллаж байна. Эхлээд «Зогсоох» дарна уу.")
+                raise ValueError("Симуляц ажиллаж байна. Эхлээд «Зогсоох» дарна уу.")
             size, p, c, ps, cs, sp = check_params(cfg)
             paused = bool(cfg.get("paused"))
             bug = str(cfg.get("bug", "none")).replace("-", "_")
@@ -299,7 +299,7 @@ class Controller:
     def start(self, cfg):
         with self.lock:
             if self.sim and not self.sim.stop.is_set():
-                raise ValueError("Симуляци ажиллаж байна. Эхлээд «Зогсоох» дарна уу.")
+                raise ValueError("Симуляц ажиллаж байна. Эхлээд «Зогсоох» дарна уу.")
             try:
                 sim = Simulation(cfg.get("size"), cfg.get("prod"), cfg.get("cons"),
                                  cfg.get("psleep"), cfg.get("csleep"))

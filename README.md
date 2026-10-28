@@ -82,6 +82,7 @@ py src\gui.py
 | `src/bounded_buffer.py` | Python хэрэгжүүлэлт (шуудангийн жишээтэй горимд) |
 | `src/ui/` | `home.html` (горим сонгох), `mail.html` (шуудангийн жишээ), `raw.html` (C · Pthreads), `tour.json` (дуут тайлбар) |
 | `tests/` | `test_buffer.py`, `test_c.py`, `test_web.py` (нийт 42 автомат тест) |
+| `docs/` | `V-1-12_Manual.pdf` – гарын авлага |
 | `tools/` | `make_voice.py` – дуут тайлбарын аудио үүсгэгч (edge-tts) |
 
 ## Үндсэн боломжууд
@@ -103,6 +104,10 @@ py src\gui.py
   | `order` | `mutex_lock` → `sem_wait` дараалал буруу | deadlock: mutex барьсан thread семафор хүлээж, бусад нь mutex хүлээнэ |
 * producer / consumer sleep (0–3 сек) болон хурд (0.25–4×)-ыг гулсуураар 0.05-ын нарийвчлалтай, ажиллаж байх үед тохируулна.
 * Лог-ийг `.txt` эсвэл `.csv` хэлбэрээр татаж авах.
+
+## Баримт бичиг
+
+* [Гарын авлага (Manual PDF)](docs/V-1-12_Manual.pdf)
 
 ## Хэрэглэсэн бэлэн код, сан, AI
 
