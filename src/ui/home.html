@@ -9,208 +9,130 @@
 :root{
   --sans:"IBM Plex Sans",system-ui,"Segoe UI",Roboto,"Noto Sans",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"DejaVu Sans Mono",monospace;
-  --bg:#eef1f5; --card:#fff; --ink:#1a2233; --muted:#5f6b7e; --line:#dde3eb;
-  --accent:#1a2233; --green:#11845b; --green-soft:#e2f4ec; --blue:#2e5bd8; --blue-soft:#e5ecfc;
-  --amber:#c27a0e; --amber-soft:#fdf1dc; --mail:#3347b0;
-  color-scheme:light;
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg:#0f131b;--card:#161c27;--ink:#e6ebf2;--muted:#94a0b2;--line:#273042;--accent:#e6ebf2;
-        --green:#3fcf8e;--green-soft:#123326;--blue:#7c9cff;--blue-soft:#18264a;--amber:#f2b445;--amber-soft:#3a2b10;color-scheme:dark}
+  --bg:#0c1222; --ink:#eef2fa; --muted:#93a0bb; --line:rgba(255,255,255,.09);
+  --glass:rgba(255,255,255,.045); --glass-hi:rgba(255,255,255,.08);
+  --green:#3fd69a; --blue:#6f95ff; --amber:#ffc35a; --mail:#4a62e6;
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);display:flex;flex-direction:column}
-main{width:100%;max-width:1180px;margin:auto;padding:clamp(14px,3vh,48px) 24px}
-.head{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:32px;align-items:center;margin-bottom:clamp(16px,3vh,34px)}
-.lead{margin:10px 0 0;color:var(--muted);font-size:17px;max-width:30em}
-.lead b{color:var(--ink);font-weight:600}
-/* live mini buffer: the one moving thing on the page */
-.demo{background:#1f2a3d;border-radius:18px;padding:18px 20px 14px;color:#c9d3e3}
-.lane{display:flex;align-items:center;gap:12px}
-.who{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font:600 14px var(--mono);transition:background .2s,color .2s}
-.who.p{background:#174a36;color:#a6f0cc} .who.c{background:#2a3d73;color:#c9d6ff}
-.who.wait{background:#5a3f0c;color:#ffd68a}
-.ring{flex:1;display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-.slot{height:clamp(40px,6.5vh,58px);border-radius:9px;border:2px dashed #3d4c66;background:#2b3850;display:grid;place-items:center;font:600 17px var(--mono);color:#1a2233;position:relative}
-.slot.on{background:#fff4dc;border:2px solid #f2b445;animation:pop .35s ease-out}
-.slot.out{animation:drop .35s ease-in}
-.slot i{position:absolute;bottom:-17px;font:500 10.5px var(--mono);color:#7d8aa3;font-style:normal}
-.slot.in-at::after,.slot.out-at::before{position:absolute;font:600 10.5px var(--mono);padding:0 6px;border-radius:999px}
-.slot.out-at::before{content:"out";top:-19px;background:#2a3d73;color:#c9d6ff}
-.slot.in-at::after{content:"in";bottom:-19px;background:#174a36;color:#a6f0cc;z-index:1}
-@keyframes pop{from{transform:scale(.8)}to{transform:none}}
-@keyframes drop{from{transform:scale(1.06)}to{transform:none}}
-.slot b{font-weight:600}
-.vals{display:flex;gap:18px;margin-top:22px;font:500 13px var(--mono);color:#8f9bb0}
-.vals b{font-weight:600;color:#e6ebf2;margin-left:6px}
-.vals .z b{color:#ff8a80}
-.steps{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:10px;font:500 12.5px var(--mono);color:#6f7d96}
-.steps span{padding:2px 7px;border-radius:6px;transition:background .12s,color .12s}
-.steps span.hot{background:#e6ebf2;color:#1a2233}
-@media (max-width:900px){.head{grid-template-columns:1fr}}
-.kicker{font:500 15px var(--sans);color:var(--muted)}
-h1{font-size:clamp(28px,min(3.6vw,5.4vh),46px);line-height:1.08;margin:2px 0 0;letter-spacing:-.025em;font-weight:700}
-.flow{display:flex;align-items:center;justify-content:flex-start;gap:10px;flex-wrap:wrap;margin:0 0 clamp(16px,3vh,28px);font:500 14px var(--mono)}
-.flow .n{padding:6px 12px;border-radius:999px}
-.flow .p{background:var(--green-soft);color:var(--green)} .flow .b{background:var(--amber-soft);color:var(--amber)} .flow .c{background:var(--blue-soft);color:var(--blue)}
-.flow .s{color:var(--muted);font-weight:500}
-.flow .ar{color:var(--muted)}
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:clamp(14px,2.4vh,22px);display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s}
-.card:hover{border-color:var(--ink)}
+body{margin:0;color:var(--ink);font:16px/1.5 var(--sans);display:flex;flex-direction:column;
+  background:
+    radial-gradient(60vw 50vh at 8% 18%, rgba(63,214,154,.16), transparent 70%),
+    radial-gradient(60vw 50vh at 92% 22%, rgba(111,149,255,.20), transparent 70%),
+    radial-gradient(70vw 50vh at 50% 110%, rgba(255,195,90,.10), transparent 70%),
+    var(--bg)}
+main{width:100%;max-width:1160px;margin:auto;padding:clamp(18px,4vh,56px) 24px clamp(10px,2vh,24px);text-align:center}
+.kicker{display:inline-block;font:500 13.5px var(--sans);color:var(--muted);padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--glass)}
+h1{font-size:clamp(34px,min(5vw,7.4vh),66px);line-height:1.04;margin:clamp(10px,2vh,18px) 0 8px;letter-spacing:-.035em;font-weight:700}
+h1 span{background:linear-gradient(90deg,var(--green),#9fe8ff 50%,var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{margin:0 auto;color:var(--muted);font-size:clamp(15px,2vh,18px);max-width:34em}
+.pipe{position:relative;display:flex;align-items:center;justify-content:center;gap:clamp(14px,2vw,28px);margin:clamp(26px,5vh,52px) auto clamp(30px,5.4vh,54px);max-width:880px}
+.node{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;font:600 13px var(--mono)}
+.node .ic{width:clamp(52px,7.5vh,68px);height:clamp(52px,7.5vh,68px);border-radius:20px;display:grid;place-items:center}
+.node.p .ic{background:rgba(63,214,154,.14);box-shadow:inset 0 0 0 1.5px rgba(63,214,154,.5);color:var(--green)}
+.node.c .ic{background:rgba(111,149,255,.14);box-shadow:inset 0 0 0 1.5px rgba(111,149,255,.5);color:var(--blue)}
+.node.p{color:var(--green)} .node.c{color:var(--blue)}
+.node svg{width:55%;height:55%}
+.buf{position:relative;flex:1;max-width:560px;padding:12px;border-radius:20px;background:var(--glass);border:1px solid var(--line)}
+.slots{display:grid;grid-template-columns:repeat(8,1fr);gap:7px}
+.slots i{height:clamp(36px,6vh,54px);border-radius:10px;border:1.5px dashed rgba(255,255,255,.16);transition:background .3s,border-color .3s,box-shadow .3s}
+.slots i.on{background:linear-gradient(180deg,#ffe2a1,#ffc35a);border:1.5px solid #ffc35a;box-shadow:0 0 18px rgba(255,195,90,.35)}
+.buflabel{position:absolute;left:0;right:0;top:-22px;font:500 12px var(--mono);color:var(--muted)}
+.sems{position:absolute;left:0;right:0;bottom:-26px;display:flex;justify-content:center;gap:18px;font:500 12.5px var(--mono);color:var(--muted)}
+.sems b{color:var(--ink);font-weight:600}
+.dot{position:absolute;left:0;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--amber);box-shadow:0 0 14px var(--amber);opacity:0;pointer-events:none}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:18px;text-align:left}
+.card{position:relative;display:flex;gap:18px;align-items:center;padding:clamp(16px,2.6vh,24px);border-radius:20px;text-decoration:none;color:inherit;
+  background:var(--glass);border:1px solid var(--line);transition:background .2s,border-color .2s,transform .2s}
+.card:hover{background:var(--glass-hi);transform:translateY(-2px)}
+.card.py:hover{border-color:rgba(74,98,230,.8)} .card.c:hover{border-color:rgba(63,214,154,.7)}
 .card:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
-.pic{width:100%;aspect-ratio:400/170;max-height:17vh;border-radius:14px;margin-bottom:16px;display:block;overflow:hidden}
-.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.badge{font:600 12.5px var(--sans);padding:4px 10px;border-radius:999px}
-.badge.py{background:var(--amber-soft);color:var(--amber)}
-.badge.c{background:var(--green-soft);color:var(--green)}
-.card h2{margin:10px 0 4px;font-size:23px}
-.card p{margin:0 0 12px;color:var(--muted)}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 clamp(10px,2vh,18px)}
-.tags span{font-size:13px;padding:4px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
-.go{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--mail);color:#fff;border-radius:12px;padding:12px 16px;font-weight:700}
-.py .pic{background:#eef1fc}.c .pic{background:#111827}
-.card.c .go{background:var(--ink);color:var(--card)}
-.warn{display:none;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--amber-soft);color:var(--amber);font-size:14px;font-weight:600}
-.cli{margin-top:clamp(10px,2.4vh,26px);display:flex;align-items:center;justify-content:flex-start;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px}
-code{font:13px var(--mono);background:var(--card);border:1px solid var(--line);padding:4px 9px;border-radius:7px;white-space:nowrap;color:var(--ink)}
-footer{color:var(--muted);font-size:13px;text-align:center;padding:10px 16px 16px}
-/* little animations */
-@keyframes l2r{0%{transform:translate(0,0) rotate(-10deg);opacity:0}15%{opacity:1}50%{transform:translate(112px,30px) rotate(0);opacity:1}60%,100%{opacity:0;transform:translate(112px,30px)}}
-@keyframes r2c{0%,50%{opacity:0;transform:translate(0,0)}60%{opacity:1}95%{transform:translate(112px,-14px);opacity:1}100%{opacity:0;transform:translate(112px,-14px)}}
-.e1{animation:l2r 3.2s ease-in-out infinite}.e2{animation:r2c 3.2s ease-in-out infinite}
-@keyframes type{0%,8%{opacity:0}12%,100%{opacity:1}}
-.t1{animation:type 4s steps(1) infinite}.t2{animation:type 4s steps(1) infinite;animation-delay:.8s}.t3{animation:type 4s steps(1) infinite;animation-delay:1.6s}
-@keyframes cell{0%,40%{fill:#1f2937}45%,100%{fill:#3a2f0b}}
-.cl{animation:cell 4s steps(1) infinite}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
-@media (max-width:820px){.cards{grid-template-columns:1fr}}
+.art{flex:none;width:clamp(84px,11vh,112px);height:clamp(84px,11vh,112px);border-radius:18px;display:grid;place-items:center}
+.py .art{background:linear-gradient(145deg,#5068ec,#2c3ca6)} .c .art{background:linear-gradient(145deg,#1b2a3f,#0d1626);box-shadow:inset 0 0 0 1px rgba(63,214,154,.35)}
+.art svg{width:66%;height:66%}
+.card h2{margin:0;font-size:clamp(19px,2.6vh,23px);letter-spacing:-.01em}
+.card p{margin:4px 0 10px;color:var(--muted);font-size:15px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{font-size:12.5px;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.06);color:#c9d3e6}
+.arrow{margin-left:auto;flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);transition:background .2s,transform .2s}
+.card:hover .arrow{transform:translateX(3px)} .py:hover .arrow{background:var(--mail)} .c:hover .arrow{background:#1f8f66}
+.arrow svg{width:18px;height:18px}
+.warn{display:none;margin:0 0 8px;padding:6px 10px;border-radius:8px;background:rgba(255,195,90,.14);color:var(--amber);font-size:13.5px;font-weight:600}
+.cli{margin-top:clamp(14px,3vh,28px);color:var(--muted);font-size:14px}
+code{font:13px var(--mono);background:rgba(255,255,255,.06);border:1px solid var(--line);padding:4px 9px;border-radius:7px;white-space:nowrap;color:var(--ink)}
+footer{color:var(--muted);font-size:13px;text-align:center;padding:8px 16px 14px;opacity:.8}
+@media (max-width:860px){.cards{grid-template-columns:1fr}.slots{grid-template-columns:repeat(6,1fr)}.slots i:nth-child(n+7){display:none}}
+@media (prefers-reduced-motion:reduce){.dot{display:none}}
 </style>
 </head>
 <body>
 <main>
-  <div class="head">
-    <div>
-      <div class="kicker">F.CSM302 Үйлдлийн систем, бие даалт 1, V-1-12</div>
-      <h1>Producer–Consumer бодлого</h1>
-      <p class="lead">Хязгаарлагдмал буферийг <b>empty</b>, <b>full</b> семафор, <b>mutex</b>-ээр хамгаалах арга. Хоёр хэлбэрийн аль нэгийг сонгоно уу.</p>
-    </div>
-    <div class="demo" aria-label="Буферийн жишээ: producer item хийж, consumer авч байна">
-      <div class="lane">
-        <div class="who p" id="dP">P1</div>
-        <div class="ring" id="ring"></div>
-        <div class="who c" id="dC">C1</div>
-      </div>
-      <div class="vals"><span id="vE">empty<b>6</b></span><span id="vF">full<b>0</b></span><span id="vM">mutex<b>free</b></span></div>
-      <div class="steps" id="steps"></div>
-    </div>
+  <span class="kicker">F.CSM302 Үйлдлийн систем · Бие даалт 1 · V-1-12</span>
+  <h1><span>Producer–Consumer</span><br>бодлого</h1>
+  <p class="lead">Хязгаарлагдмал буферийг семафор ба mutex-ээр хамгаалах арга</p>
+
+  <div class="pipe" id="pipe" aria-hidden="true">
+    <div class="node p"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>producer</div>
+    <div class="buf"><div class="buflabel">buffer[8]</div><div class="slots" id="slots"></div>
+      <div class="sems"><span>empty <b id="e">8</b></span><span>full <b id="f">0</b></span><span>mutex <b>1</b></span></div></div>
+    <div class="node c"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></div>consumer</div>
   </div>
 
   <div class="cards">
     <a class="card py" href="/mail">
-      <svg class="pic" viewBox="0 0 400 170" aria-hidden="true">
-        <rect width="400" height="170" fill="#eef1fc"/>
-        <rect x="120" y="44" width="160" height="82" rx="22" fill="#3347b0"/>
-        <text x="200" y="60" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" letter-spacing="3">ШУУДАН</text>
-        <g fill="#fffdf6" stroke="#c7a462" stroke-width="2"><rect x="134" y="68" width="30" height="40" rx="4"/><rect x="170" y="68" width="30" height="40" rx="4"/><rect x="206" y="68" width="30" height="40" rx="4" fill="#dfe6fb" stroke="#b9c6f0"/><rect x="242" y="68" width="24" height="40" rx="4" fill="#dfe6fb" stroke="#b9c6f0"/></g>
-        <circle cx="62" cy="86" r="20" fill="#ffd9b8"/><rect x="44" y="62" width="36" height="12" rx="4" fill="#3347b0"/>
-        <circle cx="338" cy="86" r="20" fill="#ffd9b8"/><path d="M318 82a20 20 0 0 1 40 0z" fill="#0ea5e9"/>
-        <text x="62" y="128" text-anchor="middle" font-size="11" font-weight="700" fill="#15803d">P1</text>
-        <text x="338" y="128" text-anchor="middle" font-size="11" font-weight="700" fill="#1d4ed8">C1</text>
-        <g class="e1"><g transform="translate(80 44)"><rect width="30" height="21" rx="3" fill="#fffdf6" stroke="#c7a462" stroke-width="2"/><path d="M1 2 L15 12 L29 2" fill="none" stroke="#c7a462" stroke-width="2"/></g></g>
-        <g class="e2"><g transform="translate(215 92)"><rect width="30" height="21" rx="3" fill="#fffdf6" stroke="#c7a462" stroke-width="2"/><path d="M1 2 L15 12 L29 2" fill="none" stroke="#c7a462" stroke-width="2"/></g></g>
-        <g font-family="IBM Plex Mono,DejaVu Sans Mono,monospace" font-size="11" font-weight="700"><text x="134" y="150" fill="#15803d">Сул нүд 2</text><text x="212" y="150" fill="#1d4ed8">Захидал 2</text></g>
-      </svg>
-      <div class="top"><span class="badge py">Python, жишээтэй</span></div>
-      <h2>Шуудангийн хайрцаг</h2>
-      <p>Шуудан зөөгч, хэрэглэгч, хайрцгийн жишээгээр ойлгомжтой тайлбарлана.</p>
-      <div class="tags"><span>Монгол дуут тайлбар</span><span>Кодын мөр</span><span>Бэлэн жишээ</span></div>
-      <span class="go">Шуудангийн хуудсыг нээх</span>
+      <div class="art"><svg viewBox="0 0 64 64" fill="none"><rect x="8" y="16" width="48" height="34" rx="6" fill="#fffaf0"/><path d="M10 19l22 16 22-16" stroke="#c7a462" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="18" r="6" fill="#ff6b5a"/></svg></div>
+      <div>
+        <h2>Шуудангийн хайрцаг</h2>
+        <p>Шуудан зөөгч ба хэрэглэгчийн жишээгээр</p>
+        <div class="tags"><span>Дуут тайлбар</span><span>Кодын мөр</span><span>Python</span></div>
+      </div>
+      <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </a>
-
     <a class="card c" href="/raw">
-      <svg class="pic" viewBox="0 0 400 170" aria-hidden="true">
-        <rect width="400" height="170" fill="#111827"/>
-        <g font-family="IBM Plex Mono,DejaVu Sans Mono,monospace" font-size="11">
-          <text x="18" y="30" fill="#6ee7b7">$ ./producer_consumer 5 3 3</text>
-          <text class="t1" x="18" y="52" fill="#d1d5db">[ 0.412s] producer P1 produced 42 -&gt; slot 0</text>
-          <text class="t2" x="18" y="70" fill="#d1d5db">[ 0.535s] consumer C2 consumed 42 &lt;- slot 0</text>
-          <text class="t3" x="18" y="88" fill="#d1d5db">[ 0.761s] producer P3 produced 17 -&gt; slot 1</text>
-        </g>
-        <g font-family="IBM Plex Mono,DejaVu Sans Mono,monospace" font-size="12" font-weight="700">
-          <rect x="18" y="108" width="34" height="30" rx="4" fill="#1f2937" stroke="#4b5563"/>
-          <rect class="cl" x="56" y="108" width="34" height="30" rx="4" fill="#1f2937" stroke="#fbbf24"/><text class="t3" x="73" y="128" text-anchor="middle" fill="#fbbf24">17</text>
-          <rect x="94" y="108" width="34" height="30" rx="4" fill="#1f2937" stroke="#4b5563"/>
-          <text x="150" y="128" fill="#9ca3af">empty=4  full=1  mutex=free</text>
-        </g>
-        <text x="18" y="158" font-family="IBM Plex Mono,DejaVu Sans Mono,monospace" font-size="10.5" fill="#f87171">алдаа: race · overflow · underflow · deadlock</text>
-      </svg>
-      <div class="top"><span class="badge c">C, POSIX Pthreads</span></div>
-      <h2>Шууд ажиллагаа</h2>
-      <p>Номын C программын бодит thread, семафор, mutex.</p>
-      <div class="warn" id="cwarn"></div>
-      <div class="tags"><span>empty, full, mutex</span><span>Алдааны 4 туршилт</span><span>Лог .txt / .csv</span></div>
-      <span class="go">C хуудсыг нээх</span>
+      <div class="art"><svg viewBox="0 0 64 64" fill="none"><path d="M14 22l10 10-10 10" stroke="#3fd69a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 44h20" stroke="#cfe0ff" stroke-width="4" stroke-linecap="round"/></svg></div>
+      <div>
+        <h2>Шууд ажиллагаа</h2>
+        <p>Номын C программын бодит thread-үүд</p>
+        <div class="warn" id="cwarn"></div>
+        <div class="tags"><span>C · Pthreads</span><span>Алдааны 4 туршилт</span><span>Лог</span></div>
+      </div>
+      <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </a>
   </div>
 
   <div class="cli">Терминалаас: <code>make -C src/c &amp;&amp; ./src/c/producer_consumer 5 3 3</code></div>
 </main>
-<footer>Серверийг унтраах: терминал дээр <b>Ctrl+C</b></footer>
+<footer>Серверийг унтраах: терминал дээр Ctrl+C</footer>
 <script>
-/* a tiny picture of the algorithm (not the real engine): 6 slots, one producer, one consumer */
+/* decoration only: items fly in from the producer and out to the consumer */
 (() => {
-  const N = 6, slots = Array(N).fill(null), ring = document.getElementById("ring");
-  let inI = 0, outI = 0, empty = N, full = 0, busy = false;
-  ring.innerHTML = slots.map((_, i) => `<div class="slot"><b></b><i>${i}</i></div>`).join("");
-  const cells = [...ring.children], $ = id => document.getElementById(id);
-  const P = ["wait(empty)", "lock", "buffer[in] = item", "unlock", "signal(full)"];
-  const C = ["wait(full)", "lock", "item = buffer[out]", "unlock", "signal(empty)"];
-  function marks(){
-    cells.forEach((c, i) => { c.classList.toggle("in-at", i === inI); c.classList.toggle("out-at", i === outI); });
-    $("vE").innerHTML = `empty<b>${empty}</b>`; $("vF").innerHTML = `full<b>${full}</b>`;
-    $("vE").className = empty ? "" : "z"; $("vF").className = full ? "" : "z";
-    if (empty) $("dP").classList.remove("wait");
-    if (full) $("dC").classList.remove("wait");
+  const N = 8, box = document.getElementById("slots"), pipe = document.getElementById("pipe");
+  box.innerHTML = "<i></i>".repeat(N);
+  const cells = [...box.children];
+  let inI = 0, outI = 0, n = 0, t = 0;
+  const show = () => { document.getElementById("e").textContent = N - n; document.getElementById("f").textContent = n; };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function fly(from, to, done){
+    if (reduce || document.hidden){ done(); return; }
+    const pr = pipe.getBoundingClientRect(), a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
+    const d = document.createElement("span"); d.className = "dot"; pipe.appendChild(d);
+    const x0 = a.left + a.width / 2 - pr.left - 7, x1 = b.left + b.width / 2 - pr.left - 7;
+    d.animate([{transform:`translateX(${x0}px)`, opacity:0}, {opacity:1, offset:.2}, {transform:`translateX(${x1}px)`, opacity:1}],
+              {duration:520, easing:"cubic-bezier(.4,0,.2,1)"}).onfinish = () => { d.remove(); done(); };
   }
-  function show(seq, hot){ $("steps").innerHTML = seq.map((t, i) => `<span class="${i === hot ? "hot" : ""}">${t}</span>`).join("→"); }
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  async function act(isP){
-    const seq = isP ? P : C, who = isP ? $("dP") : $("dC");
-    if ((isP ? empty : full) === 0){ who.classList.add("wait"); show(seq, 0); return; }
-    who.classList.remove("wait"); busy = true;
-    for (let k = 0; k < seq.length; k++){
-      show(seq, k);
-      $("vM").innerHTML = `mutex<b>${k >= 1 && k <= 2 ? who.textContent : "free"}</b>`;
-      if (k === 0){ if (isP) empty--; else full--; }
-      if (k === 2){
-        const c = cells[isP ? inI : outI];
-        if (isP){ slots[inI] = 1 + Math.floor(Math.random() * 99); c.firstChild.textContent = slots[inI];
-                  c.classList.add("on"); inI = (inI + 1) % N; }
-        else { slots[outI] = null; c.firstChild.textContent = ""; c.classList.remove("on"); c.classList.add("out");
-               setTimeout(() => c.classList.remove("out"), 400); outI = (outI + 1) % N; }
-      }
-      if (k === 4){ if (isP) full++; else empty++; }
-      marks(); await sleep(170);
+  const P = pipe.querySelector(".node.p .ic"), C = pipe.querySelector(".node.c .ic");
+  setInterval(() => {
+    t++;
+    const produce = Math.floor(t / 10) % 2 === 0 ? Math.random() < .7 : Math.random() < .3;
+    if (produce && n < N){
+      const i = inI; inI = (inI + 1) % N; n++; show();
+      fly(P, cells[i], () => cells[i].classList.add("on"));
+    } else if (!produce && n > 0){
+      const i = outI; outI = (outI + 1) % N; n--; show();
+      cells[i].classList.remove("on"); fly(cells[i], C, () => {});
     }
-    busy = false;
-  }
-  marks(); show(P, -1);
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  let tick = 0;
-  (async function loop(){
-    for (;;){
-      if (!document.hidden && !busy){
-        tick++;
-        // phases: the producer is faster for a while (buffer fills), then the consumer (it empties)
-        const pFast = Math.floor(tick / 14) % 2 === 0;
-        const isP = Math.random() < (pFast ? .72 : .28);
-        await act(isP);
-      }
-      await sleep(260);
-    }
-  })();
+  }, 620);
 })();
 
 fetch("/api/c/state", {cache: "no-store"}).then(async r => {
