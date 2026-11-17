@@ -253,6 +253,47 @@ pre{border:1px solid var(--line)}
 .check.ok{background:rgba(63,214,154,.14)}
 .mk.out span{background:rgba(111,149,255,.22);color:#c9d6ff} .mk.in span{background:rgba(63,214,154,.2);color:#a6f0cc}
 
+
+/* ---------- layout: settings on the left, the picture on the right ---------- */
+main{grid-template-columns:clamp(260px,21vw,320px) minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr) minmax(130px,28%)!important;max-width:1760px}
+.side{grid-row:1 / span 2;display:flex;flex-direction:column;gap:0;padding:6px 16px;overflow:auto;min-height:0}
+.grp{padding:12px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.grp:last-child{border-bottom:0}
+.grp h3{margin:0;font:600 13.5px var(--sans);color:var(--ink);display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.grp h3 small{font:400 11.5px var(--sans);color:var(--muted)}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.trio .stp{width:100%;justify-content:space-between}
+.trio .stp input{width:30px}
+.side .ctl.rs{width:100%}
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+.side .ctl .label{font-size:12.5px}
+.bugchips{display:flex;flex-direction:column;gap:5px}
+.bugchips button{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;padding:7px 11px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);font:500 13px var(--mono);color:var(--ink)}
+.bugchips button i{font:500 11.5px var(--sans);font-style:normal;color:var(--muted)}
+.bugchips button:hover:not(:disabled){border-color:rgba(255,255,255,.3)}
+.bugchips button.on{border-color:var(--red);background:var(--red-soft)} .bugchips button.on i{color:var(--red)}
+.bugchips button[data-v=none].on{border-color:var(--green);background:var(--green-soft)} .bugchips button[data-v=none].on i{color:var(--green)}
+.bugchips button:disabled{opacity:.45;cursor:not-allowed}
+.run .actions{margin:0;display:grid;grid-template-columns:repeat(4,1fr) auto;gap:6px}
+.run .actions .btn{width:auto;justify-content:center;padding:0}
+.run .actions #bStart{grid-column:1 / -1;height:42px;font-size:15px}
+.run .actions #bStart .t{display:inline!important}
+.run .actions .btn:not(#bStart) .t{display:none}
+.run .actions .btn.icon{width:40px}
+.err{margin:0}
+.chk2 .totals b{font-size:24px}
+.chk2 .check{margin-top:2px}
+.sems{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.stage{grid-template-columns:minmax(180px,1fr) 24px minmax(0,2.6fr) 24px minmax(180px,1fr)!important}
+.bugchips{display:grid;grid-template-columns:1fr 1fr}
+.bugchips button[data-v=none]{grid-column:1 / -1}
+.bugchips button{flex-direction:column;align-items:flex-start;gap:0;padding:6px 10px}
+.side .ctl.rs input{height:26px}
+@media (max-width:1600px){.bufhead{flex-wrap:wrap}.bufhead .legend{order:3;width:100%;justify-content:flex-start}}
+@media (max-height:860px){.grp{padding:7px 0;gap:6px}.grp h3 small{display:none}.bugchips button{padding:4px 9px}.side .ctl.rs input{height:20px}.side .ctl{gap:2px}.chk2 .totals b{font-size:20px}.run .actions #bStart{height:38px}}
+@media (max-height:740px){.chk2 h3{display:none}.grp{padding:6px 0}}
+@media (max-width:1000px){main{grid-template-columns:1fr!important;grid-template-rows:auto auto 340px!important}.side{grid-row:auto}}
+
 /* ---------- log ---------- */
 .logc{display:flex;flex-direction:column;min-height:0;padding:10px 14px 12px}
 .logbar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
@@ -286,34 +327,58 @@ pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
 </header>
 
 <main>
-  <section class="card">
-    <div class="toolbar">
-      <div class="ctl"><span class="label">BUFFER_SIZE</span><div class="stp" data-for="size"><button type="button">−</button><input id="size" type="number" min="1" max="20" value="5"><button type="button">+</button></div></div>
-      <div class="ctl"><span class="label">producers</span><div class="stp" data-for="prod"><button type="button">−</button><input id="prod" type="number" min="1" max="10" value="2"><button type="button">+</button></div></div>
-      <div class="ctl"><span class="label">consumers</span><div class="stp" data-for="cons"><button type="button">−</button><input id="cons" type="number" min="1" max="10" value="2"><button type="button">+</button></div></div>
-      <div class="vsep"></div>
-      <div class="ctl rs p"><span class="label" title="producer sleep (сек)">prod sleep<output data-for="psleep" data-u=" s"></output></span><input id="psleep" type="range" min="0" max="3" step="0.05" value="1"></div>
-      <div class="ctl rs c"><span class="label" title="consumer sleep (сек)">cons sleep<output data-for="csleep" data-u=" s"></output></span><input id="csleep" type="range" min="0" max="3" step="0.05" value="1"></div>
-      <div class="ctl rs "><span class="label">хурд<output data-for="speed" data-u="×"></output></span><input id="speed" type="range" min="0.25" max="4" step="0.05" value="1"></div>
-      <div class="ctl rs " title="Зөвхөн UI горимд: thread item хийсний дараа «producing», авсны дараа «consuming» төлөвт ингэж удаан бодитоор унтана. 0 = номын CLI-тэй адил бодит хурд."><span class="label">hold<output data-for="hold" data-u=" s"></output></span><input id="hold" type="range" min="0" max="1" step="0.05" value="0.3"></div>
-      <div class="ctl"><span class="label">алдаа</span><select id="bug" class="bugsel">
+  <aside class="card side">
+    <div class="grp">
+      <h3>Тохиргоо</h3>
+      <div class="trio">
+        <div class="ctl"><span class="label" title="BUFFER_SIZE">Буфер</span><div class="stp" data-for="size"><button type="button">−</button><input id="size" type="number" min="1" max="20" value="5"><button type="button">+</button></div></div>
+        <div class="ctl"><span class="label">Producer</span><div class="stp" data-for="prod"><button type="button">−</button><input id="prod" type="number" min="1" max="10" value="2"><button type="button">+</button></div></div>
+        <div class="ctl"><span class="label">Consumer</span><div class="stp" data-for="cons"><button type="button">−</button><input id="cons" type="number" min="1" max="10" value="2"><button type="button">+</button></div></div>
+      </div>
+    </div>
+    <div class="grp">
+      <h3>Хугацаа <small>ажиллаж байхад өөрчилнө</small></h3>
+      <div class="quad">
+      <div class="ctl rs p"><span class="label" title="producer sleep (сек)">P унтах<output data-for="psleep" data-u=" s"></output></span><input id="psleep" type="range" min="0" max="3" step="0.05" value="1"></div>
+      <div class="ctl rs c"><span class="label" title="consumer sleep (сек)">C унтах<output data-for="csleep" data-u=" s"></output></span><input id="csleep" type="range" min="0" max="3" step="0.05" value="1"></div>
+      <div class="ctl rs"><span class="label">Хурд<output data-for="speed" data-u="×"></output></span><input id="speed" type="range" min="0.25" max="4" step="0.05" value="1"></div>
+      <div class="ctl rs" title="Зөвхөн UI горимд: thread item хийсний дараа «producing», авсны дараа «consuming» төлөвт ингэж удаан бодитоор унтана. 0 = номын CLI-тэй адил бодит хурд."><span class="label">Hold<output data-for="hold" data-u=" s"></output></span><input id="hold" type="range" min="0" max="1" step="0.05" value="0.3"></div>
+      </div>
+    </div>
+    <div class="grp">
+      <h3>Алдааны туршилт</h3>
+      <div class="bugchips" role="radiogroup">
+        <button type="button" data-v="none" class="on">Зөв код</button>
+        <button type="button" data-v="no_mutex">mutex-гүй <i>race</i></button>
+        <button type="button" data-v="no_empty">wait(empty)-гүй <i>overflow</i></button>
+        <button type="button" data-v="no_full">wait(full)-гүй <i>underflow</i></button>
+        <button type="button" data-v="order">lock → wait <i>deadlock</i></button>
+      </div>
+      <select id="bug" class="bugsel" hidden>
         <option value="none">✓ зөв код</option>
         <option value="no_mutex">mutex-гүй → race</option>
         <option value="no_empty">wait(empty)-гүй → overflow</option>
         <option value="no_full">wait(full)-гүй → underflow</option>
         <option value="order">lock→wait → deadlock</option>
-      </select></div>
-      <label class="chk"><input id="paused" type="checkbox">step</label>
+      </select>
+    </div>
+    <div class="grp run">
+      <label class="chk"><input id="paused" type="checkbox">Алхам алхмаар эхлэх</label>
       <div class="actions">
-        <button class="btn primary" id="bStart" title="Start">▶<span class="t"> Start</span></button>
+        <button class="btn primary" id="bStart" title="Start">▶<span class="t"> Эхлүүлэх</span></button>
         <button class="btn" id="bPause" title="Pause"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg><span class="t"> Pause</span></button>
         <button class="btn" id="bStep" title="Step">⏭<span class="t"> Step</span></button>
         <button class="btn" id="bStop" title="Stop">■<span class="t"> Stop</span></button>
         <button class="btn icon" id="bReset" title="Reset">↺</button>
       </div>
+      <div class="err" id="err"></div>
     </div>
-    <div class="err" id="err"></div>
-  </section>
+    <div class="grp chk2">
+      <h3>Шалгалт</h3>
+      <div class="totals"><div title="produced">produced<b id="vProd">0</b></div><div title="consumed">consumed<b id="vCons">0</b></div><div title="count хувьсагч (C)">count<b id="vCount">0</b></div></div>
+      <div class="check" id="check">—</div>
+    </div>
+  </aside>
 
   <section class="card stage">
     <div class="col">
@@ -338,10 +403,6 @@ pre .p{color:#86efac} pre .c{color:#93c5fd} pre .h{color:#fcd34d}
           <div class="lock"><svg viewBox="0 0 48 48" aria-hidden="true"><path id="shackle" d="M15 22v-6a9 9 0 0 1 18 0v-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" transform="translate(0 -4)"/><rect x="9" y="21" width="30" height="22" rx="6" fill="currentColor"/></svg><b id="vMutex">free</b></div>
           <div class="mlast" id="mLast"></div>
           <div class="mq" id="mWait"></div></div>
-        <div class="sem">
-          <div class="totals"><div title="produced">prod<b id="vProd">0</b></div><div title="consumed">cons<b id="vCons">0</b></div><div title="count хувьсагч (C)">count<b id="vCount">0</b></div></div>
-          <div class="check" id="check">—</div>
-        </div>
       </div>
     </div>
     <div class="flow">→</div>
@@ -554,6 +615,7 @@ function render(s){
   if ($("#bPause").dataset.m !== pz){ $("#bPause").dataset.m = pz; $("#bPause").innerHTML = pz === "r" ? '▶<span class="t"> Resume</span>' : '<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg><span class="t"> Pause</span>'; }
   for (const id of ["#size", "#prod", "#cons", "#paused"]) $(id).disabled = !!live;
   $("#bug").disabled = !!live;
+  document.querySelectorAll(".bugchips button").forEach(b => b.disabled = !!live);
   document.querySelectorAll(".stp button").forEach(b => b.disabled = !!live);
   const pill = $("#pill");
   if (!s){
@@ -732,6 +794,11 @@ for (const id of ["#psleep", "#csleep", "#speed", "#hold"]){
   $(id).addEventListener("change", () => { clearTimeout(tuneT); sendTune(); });
 }
 $("#bug").onchange = slSync;
+document.querySelectorAll(".bugchips button").forEach(b => b.onclick = () => {
+  $("#bug").value = b.dataset.v;
+  document.querySelectorAll(".bugchips button").forEach(x => x.classList.toggle("on", x === b));
+  slSync();
+});
 slSync();
 $("#bStart").onclick = () => api("start", {size: val("#size"), prod: val("#prod"), cons: val("#cons"),
   psleep: val("#psleep"), csleep: val("#csleep"), speed: val("#speed"), hold: val("#hold"), paused: $("#paused").checked,
