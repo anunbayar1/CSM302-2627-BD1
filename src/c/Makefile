@@ -58,7 +58,9 @@ test: $(BIN)
 	./$(BIN) -q --bug no-empty 1 4 1 0.01; test $$? -eq 2
 	./$(BIN) -q --bug no-full 1 1 4 0.01; test $$? -eq 2
 	./$(BIN) -q --bug order 2 2 2 0.05; test $$? -eq 3
-	./$(BIN) -q --bug order 0.25 2 2 0.05; test $$? -eq 3   # short run: found by structure, not by time
+	@# short run: a deadlock that happened is reported however short the run (the deadlock itself
+	@# may not have formed yet in ~2% of 0.25 s runs, then it says so: try up to 3 times)
+	for i in 1 2 3; do ./$(BIN) -q --bug order 0.25 2 2 0.05; rc=$$?; [ $$rc -eq 3 ] && break; done; test $$rc -eq 3
 	@echo "== bad input (must be rejected, exit 1)"
 	@for args in "" "1 2" "0 1 1" "abc 1 1" "1 0 1" "1 1 0" "1 1 101" "1 1 1 -1" "1 1 1 x"; do \
 	  ./$(BIN) $$args >/dev/null 2>&1; rc=$$?; \

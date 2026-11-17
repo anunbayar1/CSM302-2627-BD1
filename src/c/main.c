@@ -268,6 +268,9 @@ int main(int argc, char *argv[])
     else if (bug || !ok)
         printf("errors: lost_items=%ld bad_reads=%ld count_errors=%ld count=%d (must be %d)\n",
                (long)lost, (long)bad_reads, (long)count_errors, cnt, left);
+    if (bug == BUG_ORDER && !deadlock)
+        printf("note: no deadlock in this run yet (it starts once a thread locks the mutex while the "
+               "buffer is empty/full); run longer to see it\n");
     buffer_destroy();
     return deadlock ? 3 : ok ? 0 : 2;
 }
