@@ -31,7 +31,7 @@ Bounded buffer (цагираг дараалал)-ийг `empty` / `full` тоо�
 sudo apt install git build-essential python3
 
 # 1. Татах
-git clone git@github.com:anunbayar1/CSM302-2627-BD1.git
+git clone https://github.com/anunbayar1/CSM302-2627-BD1.git
 cd CSM302-2627-BD1
 
 # 2. Ажиллуулах (C программыг автоматаар compile хийж, хөтөч нээгдэнэ)
@@ -40,6 +40,7 @@ python3 src/gui.py
 
 # 3. Тушаалын мөрөөс (номын дагуу)
 make -C src/c
+make -C src/c BUFFER_SIZE=10         # өөр хэмжээ (1–20): өөрчлөгдвөл өөрөө дахин хөрвүүлнэ
 ./src/c/producer_consumer 5 3 3      # <унтах сек> <producers> <consumers>
 ./src/c/producer_consumer --bug no-mutex 5 3 3   # туршилт: no-mutex | no-empty | no-full | order
 
@@ -66,7 +67,7 @@ wsl --install -d Ubuntu
 3. PowerShell эсвэл Command Prompt дээр:
 
 ```
-git clone git@github.com:anunbayar1/CSM302-2627-BD1.git
+git clone https://github.com/anunbayar1/CSM302-2627-BD1.git
 cd CSM302-2627-BD1
 py src\gui.py
 ```
@@ -78,10 +79,10 @@ py src\gui.py
 | Зам | Агуулга |
 |---|---|
 | `src/c/` | C / Pthreads эх код: `buffer.c` (insert_item / remove_item, empty, full, mutex), `main.c` (номын CLI), `ui.c` (UI-д төлөв дамжуулах горим), `Makefile` |
-| `src/gui.py` | localhost веб сервер (Python стандарт сан), C программыг удирдана |
+| `src/gui.py` | localhost веб сервер (Python стандарт сан), C программыг (`producer_consumer_ui`, CLI-ийн build-ийг дарж бичихгүй) удирдана |
 | `src/bounded_buffer.py` | Python хэрэгжүүлэлт (шуудангийн жишээтэй горимд) |
 | `src/ui/` | `home.html` (горим сонгох), `mail.html` (шуудангийн жишээ), `raw.html` (C · Pthreads), `tour.json` (дуут тайлбар) |
-| `tests/` | `test_buffer.py`, `test_c.py`, `test_web.py` (нийт 42 автомат тест) |
+| `tests/` | `test_buffer.py`, `test_c.py`, `test_web.py` (нийт 48 автомат тест) |
 | `docs/` | `V-1-12_Manual.pdf` – гарын авлага |
 | `tools/` | `make_voice.py` – дуут тайлбарын аудио үүсгэгч (edge-tts) |
 
@@ -93,16 +94,17 @@ py src\gui.py
 * BUFFER_SIZE (1–20), producer, consumer-ийн тоо (1–10), хурдыг тохируулна. Хурдыг ажиллаж байх үед ч өөрчилж болно.
 * Start / Pause / Step / Stop / Reset удирдлага.
 * `empty`, `full` семафорын утга, `mutex`-ийн эзэмшигч болон хүлээж буй thread-үүд, `in` / `out` заагч.
-* `produced − consumed = buffer ✓` тууштай байдлын шалгалт.
+* `produced − consumed = buffer = count ✓` тууштай байдлын шалгалт (`count` нь C-ийн хувьсагч өөрөө).
+* Буферийн дээр тэмдэглэгээний тайлбар, баруун дээд буланд animation-ийн хоцрогдол (мс). 300 мс-ээс их хоцрох нислэгийг алгасаж, нүд үргэлж C-ийн бодит төлвийг харуулна.
 * **Алдааны туршилт** (C хуудасны «алдаа» сонголт, CLI `--bug`): зөв кодоос нэг алдаа гаргаж, юу болохыг харуулна. Алдаа бүр улаанаар тэмдэглэгдэж, лог болон эцсийн дүнд гарна.
 
   | Сонголт | Кодын алдаа | Үр дагавар |
   |---|---|---|
-  | `no-mutex` | `pthread_mutex_lock/unlock` байхгүй | race condition: хоёр thread нэг нүд рүү бичиж item алга болно |
+  | `no-mutex` | `pthread_mutex_lock/unlock` байхгүй | race condition: хоёр thread нэг нүд рүү бичиж item алга болно. 1P/1C үед зөвхөн `count++`/`count--` эвдэрнэ (`count_errors`) |
   | `no-empty` | producer `sem_wait(&empty)` хийхгүй | overflow: уншаагүй item дээр дарж бичнэ |
   | `no-full` | consumer `sem_wait(&full)` хийхгүй | underflow: хоосон нүднээс уншина |
-  | `order` | `mutex_lock` → `sem_wait` дараалал буруу | deadlock: mutex барьсан thread семафор хүлээж, бусад нь mutex хүлээнэ |
-* producer / consumer sleep (0–3 сек) болон хурд (0.25–4×)-ыг гулсуураар 0.05-ын нарийвчлалтай, ажиллаж байх үед тохируулна.
+  | `order` | `mutex_lock` → `sem_wait` дараалал буруу | deadlock: mutex барьсан thread 0 утгатай семафор хүлээж, бусад нь mutex хүлээнэ (бүтцээр нь илрүүлнэ, run богино ч гэсэн) |
+* producer / consumer sleep (0–3 сек), хурд (0.25–4×) болон hold (0–1 сек)-ыг гулсуураар 0.05-ын нарийвчлалтай, ажиллаж байх үед тохируулна.
 * Лог-ийг `.txt` эсвэл `.csv` хэлбэрээр татаж авах.
 
 ## Баримт бичиг
@@ -118,8 +120,10 @@ py src\gui.py
 ## Мэдэгдэж буй хязгаарлалт
 
 * C хөдөлгүүр зөвхөн Linux дээр ажиллана (`sem_timedwait`). Windows дээр WSL2 хэрэгтэй. WSL2-гүй Windows дээр зөвхөн Python горим ажиллана. macOS дээр туршаагүй.
-* Mutex-ийг микросекунд л барьдаг тул UI дээр сүүлийн эзэмшигчийг ~0.5 сек харуулдаг (зөвхөн дүрслэлийн сунгалт).
+* **hold (анхдагч 0.3 сек) нь бодит унтлага:** веб UI-д thread item хийсний дараа «producing», авсны дараа «consuming» төлөвт ингэж удаан унтдаг, тэгснээр хүн харж амжина. Иймээс UI дээрх хурд CLI-ээс удаан. hold = 0 бол CLI-тэй адил хурдтай.
+* Mutex-ийг микросекунд л барьдаг тул mutex карт ихэнхдээ `free` харагдана. Сүүлд хэн барьсныг `сүүлд: C1` гэж тусад нь харуулна.
+* Хэт хурдан үед (sleep 0, hold 0) сервер сүүлийн 5000 үйл явдлыг л хадгалах тул логт `... N events skipped` гарна. Тоолуур ба эцсийн дүн үнэн хэвээр.
 * `no-mutex` туршилтад race condition-ийг харагдахуйц болгохын тулд critical section дотор түр завсар (UI: 40 мс, CLI: 0.1 мс) нэмсэн. Энэ нь thread-ийг тэр мөчид өөр thread тасалдуулсныг (preemption) дуурайлгана. Бусад горимд энэ завсар байхгүй.
-* Алдаа илрүүлэхэд нүд бүрт дүүрэн / хоосон эсэхийг тэмдэглэх атомар шалгагч (`occ[]`) ашигладаг. Энэ нь алгоритмын хэсэг биш, зөвхөн хэмжилт.
+* Алдаа илрүүлэхэд нүд бүрт дүүрэн / хоосон эсэхийг тэмдэглэх атомар шалгагч (`occ[]`), `0 ≤ count ≤ BUFFER_SIZE` шалгалт, төгсгөлд `count = буферт байгаа item` шалгалт ашигладаг. Эдгээр нь алгоритмын хэсэг биш, зөвхөн хэмжилт.
 * UI 50 мс тутам төлөв уншдаг тул `empty + full` түр зуур BUFFER_SIZE-аас бага харагдаж болно (thread `sem_wait`-ийн дараа, `sem_post`-оос өмнө байх үед). Энэ нь алдаа биш.
 * Дуут тайлбарын аудиог `tools/make_voice.py` (интернет шаардлагатай) үүсгэнэ. Аудио байхгүй бол хөтчийн хоолойг ашиглана.

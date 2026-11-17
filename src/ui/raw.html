@@ -141,7 +141,7 @@ main{flex:1;min-height:0;display:grid;gap:12px;padding:12px 20px 16px;
 .totals{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;align-items:end}
 .totals div{font:10.5px/1.5 ui-monospace,monospace;color:var(--muted);min-width:0;white-space:nowrap}
 .totals b{display:block;font:800 20px ui-monospace,monospace;color:var(--ink)}
-.check{margin-top:8px;font:700 12px ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:4px 9px;border-radius:999px;background:var(--soft);color:var(--muted);text-align:center}
+.check{margin-top:8px;font:700 11.5px/1.35 ui-monospace,monospace;padding:4px 9px;border-radius:12px;background:var(--soft);color:var(--muted);text-align:center}
 .check.ok{background:var(--green-soft);color:var(--green)} .check.bad{background:var(--red-soft);color:var(--red)}
 .racebadge{display:none;font:800 12px ui-monospace,monospace;padding:3px 9px;border-radius:999px;background:var(--red);color:#fff}
 .racebadge.on{display:inline-block}
@@ -542,8 +542,8 @@ function render(s){
   if (dl && s.owner) $("#dlw").textContent = `${s.owner} 🔒 mutex → sem_wait(&${s.owner[0] === "P" ? "empty" : "full"})`;
   const ch = $("#check");
   ch.title = s.count_errors && !s.lost && !s.bad_reads ? "1 producer / 1 consumer: in, out-ийг тус бүр ганц thread өөрчилдөг тул item алга болохгүй, зөвхөн count++ / count-- race болж count эвдэрнэ" : "";
-  ch.textContent = dl ? "⛔ deadlock" : races ? "✗ " + [s.lost ? `lost ${s.lost}` : "", s.bad_reads ? `garbage ${s.bad_reads}` : "",
-      s.count_errors ? `count ${cvar} ≠ ${count}` : ""].filter(Boolean).join(" · ")
+  ch.textContent = dl ? "⛔ deadlock" : races ? "✗ " + [s.lost ? `lost\u00a0${s.lost}` : "", s.bad_reads ? `garbage\u00a0${s.bad_reads}` : "",
+      s.count_errors ? `count\u00a0${cvar}\u00a0≠\u00a0${count}` : ""].filter(Boolean).join(" · ")
     : `${s.produced} − ${s.consumed} = ${count} ${ok ? "✓" : (s.stopped ? "✗" : "…")}`;
   ch.className = "check " + (ok && !dl ? "ok" : s.stopped || races || dl ? "bad" : "");
 
@@ -663,7 +663,7 @@ $("#clrLog").onclick = () => { logLines = []; fullLog = []; csvRows = []; flushL
 $("#dlTxt").onclick = () => {
   if (!fullLog.length) return showErr("Лог хоосон байна.");
   const i = runInfo || {};
-  const head = ["# Producer–Consumer · C / Pthreads (src/c/producer_consumer)",
+  const head = ["# Producer–Consumer · C / Pthreads (src/c, --ui mode)",
     `# ${i.when || new Date().toLocaleString()}`,
     `# BUFFER_SIZE=${i.size ?? "?"} producers=${i.prod ?? "?"} consumers=${i.cons ?? "?"} producer_sleep=${i.psleep ?? "?"}s consumer_sleep=${i.csleep ?? "?"}s hold=${i.hold ?? "?"}s bug=${i.bug || "none"}`, ""];
   download(`pc_log_${stamp()}.txt`, head.concat(fullLog).join("\n") + "\n", "text/plain;charset=utf-8");
