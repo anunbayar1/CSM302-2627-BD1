@@ -114,6 +114,7 @@ py src\gui.py
 ## Хэрэглэсэн бэлэн код, сан, AI
 
 * Гадаад сан ашиглаагүй: C стандарт сан + POSIX Pthreads, Python стандарт сан, vanilla HTML / CSS / JavaScript.
+* Үсгийн фонт: IBM Plex Sans / Mono (SIL Open Font License), `src/ui/fonts/`-д хадгалсан тул интернет шаардлагагүй.
 * Алгоритм нь сурах бичгийн 7.1.1-р хэсэг (Figures 7.1, 7.2) болон Programming Project 4-т үндэслэсэн.
 * **AI:** Claude (Anthropic)-г код, тест, UI боловсруулахад ашигласан.
 
