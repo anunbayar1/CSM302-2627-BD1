@@ -440,8 +440,9 @@ def make_handler(ctls, c_error=""):
                        "application/json; charset=utf-8")
 
         def _static(self, path):
-            """Serve tour.json and the generated voice files (ui/voice/...) only."""
-            types = {".json": "application/json; charset=utf-8", ".mp3": "audio/mpeg"}
+            """Serve tour.json, the generated voice files (ui/voice/...) and images only."""
+            types = {".json": "application/json; charset=utf-8", ".mp3": "audio/mpeg", ".png": "image/png",
+                     ".woff2": "font/woff2", ".css": "text/css; charset=utf-8"}
             full = os.path.realpath(os.path.join(UI_DIR, path.lstrip("/")))
             ext = os.path.splitext(full)[1]
             if path == "/voice/manifest.json" and not os.path.isfile(full):
@@ -463,7 +464,7 @@ def make_handler(ctls, c_error=""):
             if path in PAGES:
                 with open(os.path.join(UI_DIR, PAGES[path]), "rb") as f:
                     self._send(200, f.read(), "text/html; charset=utf-8")
-            elif path == "/tour.json" or path.startswith("/voice/"):
+            elif path in ("/tour.json", "/logo.png") or path.startswith(("/voice/", "/fonts/")):
                 self._static(path)
             elif m and m.group(2) == "state":
                 ctl = self._ctl(m.group(1))
