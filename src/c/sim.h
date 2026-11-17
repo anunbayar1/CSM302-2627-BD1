@@ -15,7 +15,7 @@ int    sim_running(void);
 double elapsed(void);                    /* seconds since start */
 void   sim_on_insert(buffer_item item, int slot, int count, int err);   /* called under mutex */
 void   sim_on_remove(buffer_item item, int slot, int count, int err);   /* err: RACE_* or 0 */
-extern atomic_long lost, bad_reads;      /* RACE_OVERWRITE / RACE_EMPTY_READ seen (experiments) */
+extern atomic_long lost, bad_reads, count_errors;   /* RACE_OVERWRITE / RACE_EMPTY_READ / RACE_COUNT seen */
 enum { WAIT_NONE, WAIT_SEM, WAIT_LOCK };
 void   sim_waiting(int what);            /* the current thread starts/stops blocking on a sem / the mutex */
 void   sim_lock_owner(int has);          /* the current thread took (1) / released (0) the mutex */

@@ -35,7 +35,7 @@ UI_DIR = os.path.realpath(os.path.join(HERE, "ui"))
 PAGES = {"/": "home.html", "/index.html": "home.html", "/mail": "mail.html", "/raw": "raw.html"}
 MAX_EVENTS = 5000
 C_DIR = os.path.join(HERE, "c")
-C_BIN = os.path.join(C_DIR, "producer_consumer")
+C_BIN = os.path.join(C_DIR, "producer_consumer_ui")   # own binary: never replaces a CLI build
 C_SOURCES = ("main.c", "buffer.c", "ui.c", "buffer.h", "sim.h", "Makefile")
 
 # validate_params() speaks English; the UI speaks Mongolian.
@@ -46,6 +46,7 @@ FIELD_MN = {
     "Producer max sleep": "Producer-ийн амралт (sleep)",
     "Consumer max sleep": "Consumer-ийн амралт (sleep)",
     "Speed": "Хурд",
+    "Hold": "Харуулах удаашрал (hold)",
 }
 
 
@@ -74,7 +75,7 @@ def build_c_engine(force=False):
         if have:
             return C_BIN
         raise RuntimeError("gcc/make олдсонгүй (sudo apt install build-essential)")
-    r = subprocess.run(["make", "-s"] + (["-B"] if force else []), cwd=C_DIR, capture_output=True, text=True)
+    r = subprocess.run(["make", "-s"] + (["-B"] if force else []) + ["ui"], cwd=C_DIR, capture_output=True, text=True)
     if r.returncode != 0 or not os.path.isfile(C_BIN):
         raise RuntimeError("C программыг хөрвүүлж чадсангүй:\n" + r.stderr.strip())
     return C_BIN
@@ -89,6 +90,17 @@ def check_params(cfg):
     except ValueError as e:
         raise ValueError(to_mongolian(str(e)))
     return size, p, c, ps, cs, sp
+
+
+def check_hold(v):
+    """UI-only pause of a thread in "producing"/"consuming" (seconds, 0 = real speed)."""
+    try:
+        h = float(str(v).strip())
+    except ValueError:
+        raise ValueError(f"Hold must be a number (got {v!r}).")
+    if not 0 <= h <= 1:
+        raise ValueError(f"Hold must be between 0 and 1 (got {h}).")
+    return h
 
 
 def check_speed(v):
@@ -134,10 +146,11 @@ class CController:
             if bug not in BUGS:
                 raise ValueError("Алдааны төрөл буруу: " + ", ".join(BUGS))
             mutex = bug != "no_mutex"
+            hold = check_hold(cfg.get("hold", 0.3))
             build_c_engine()
             proc = subprocess.Popen(
                 [C_BIN, "--ui", str(size), str(p), str(c), repr(ps), repr(cs), repr(sp),
-                 "1" if paused else "0", str(BUGS.index(bug))],
+                 "1" if paused else "0", str(BUGS.index(bug)), repr(hold)],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True, bufsize=1)
             names = [f"P{i + 1}" for i in range(p)] + [f"C{i + 1}" for i in range(c)]
@@ -148,10 +161,12 @@ class CController:
                                  states={n: "idle" for n in names}, produced=0, consumed=0,
                                  mutex_on=mutex, lost=0, bad_reads=0, bug=bug, deadlock=False,
                                  owner=None, waits={n: "" for n in names}, paused=paused, stopped=False, speed=sp, prod_sleep=ps,
-                                 cons_sleep=cs, elapsed=0.0)
+                                 cons_sleep=cs, hold=hold, count=0, count_errors=0, elapsed=0.0)
+                if self.proc is not None:          # the previous (stopped) run
+                    self._close(self.proc)
                 self.proc = proc
             self.run_id += 1
-            self.config = dict(size=size, prod=p, cons=c, psleep=ps, csleep=cs, bug=bug)
+            self.config = dict(size=size, prod=p, cons=c, psleep=ps, csleep=cs, bug=bug, hold=hold)
             self.error = ""
             self.reader = threading.Thread(target=self._read, args=(proc,), daemon=True)
             self.reader.start()
@@ -215,19 +230,23 @@ class CController:
         if not self._alive():
             raise ValueError("Симуляци ажиллаагүй байна.")
         cur = self.config
-        ps, cs, sp = cfg.get("psleep"), cfg.get("csleep"), cfg.get("speed")
+        ps, cs, sp, hd = cfg.get("psleep"), cfg.get("csleep"), cfg.get("speed"), cfg.get("hold")
         try:
             _, _, _, ps2, cs2 = validate_params(cur["size"], cur["prod"], cur["cons"],
                                                 cur["psleep"] if ps is None else ps,
                                                 cur["csleep"] if cs is None else cs)
             sp2 = None if sp is None else check_speed(sp)
+            hd2 = None if hd is None else check_hold(hd)
         except ValueError as e:
             raise ValueError(to_mongolian(str(e)))
-        self._send(f"tune {ps2!r} {cs2!r} {'-' if sp2 is None else repr(sp2)}")
+        self._send(f"tune {ps2!r} {cs2!r} {'-' if sp2 is None else repr(sp2)} {'-' if hd2 is None else repr(hd2)}")
         cur.update(psleep=ps2, csleep=cs2)
         patch = dict(prod_sleep=ps2, cons_sleep=cs2)
         if sp2 is not None:
             patch["speed"] = sp2
+        if hd2 is not None:
+            patch["hold"] = hd2
+            cur["hold"] = hd2
         self._patch(**patch)
 
     def stop(self):
@@ -244,10 +263,21 @@ class CController:
             reader.join(timeout=2)    # make sure the final snapshot has been read
         self._patch(stopped=True)
 
+    @staticmethod
+    def _close(proc):
+        for f in (proc.stdin, proc.stdout, proc.stderr):
+            try:
+                if f:
+                    f.close()
+            except OSError:
+                pass
+
     def reset(self):
         self.stop()
         with self.lock:
             with self.ev_lock:
+                if self.proc is not None:
+                    self._close(self.proc)
                 self.proc = None
                 self.snap = None
                 self.events = []

@@ -44,12 +44,26 @@ int  buffer_holder_blocked(void) { return atomic_load(&holder_blocked); }
 
 /* "order" experiment: wait on a semaphore while holding the mutex */
 static int wait_or_stop(sem_t *s);
+static sem_t *_Atomic holder_sem = NULL;   /* the semaphore the mutex holder waits on */
 static int wait_holding_lock(sem_t *s)
 {
+    atomic_store(&holder_sem, s);
     atomic_fetch_add(&holder_blocked, 1);
     int r = wait_or_stop(s);
     atomic_fetch_sub(&holder_blocked, 1);
+    atomic_store(&holder_sem, NULL);
     return r;
+}
+
+/* deadlock, found by its structure (not by a timeout): the mutex holder waits on a
+   semaphore that is 0. In the "order" experiment nobody can post that semaphore
+   without the mutex first, so the program can never move again. */
+int buffer_deadlocked(void)
+{
+    sem_t *s = atomic_load(&holder_sem);
+    int v = 1;
+    if (atomic_load(&holder_blocked) && s) sem_getvalue(s, &v);
+    return atomic_load(&holder_blocked) && s && v == 0;
 }
 
 static void deadline(struct timespec *ts, long ms)
@@ -152,6 +166,7 @@ int insert_item(buffer_item item)
     count = c + 1;
     last = slot;
     int err = atomic_exchange(&occ[slot], 1) ? RACE_OVERWRITE : 0;   /* slot still held an item */
+    if (count < 0 || count > size) err |= RACE_COUNT;                 /* count++ was lost / doubled */
     sim_on_insert(item, slot, count, err);    /* logging, still inside the lock */
     atomic_store(&mutex_busy, 0);
     unlock();                                 /* signal(mutex) */
@@ -187,6 +202,7 @@ int remove_item(buffer_item *item)
     count = c - 1;
     last = slot;
     int err = atomic_exchange(&occ[slot], 0) ? 0 : RACE_EMPTY_READ;  /* slot held no item */
+    if (count < 0 || count > size) err |= RACE_COUNT;                 /* count-- was lost / doubled */
     sim_on_remove(*item, slot, count, err);
     atomic_store(&mutex_busy, 0);
     unlock();
@@ -195,6 +211,7 @@ int remove_item(buffer_item *item)
 }
 
 int buffer_capacity(void) { return size; }
+int buffer_counter(void) { return count; }    /* call only after the threads are joined */
 
 int buffer_count(void)                        /* items really in the buffer */
 {

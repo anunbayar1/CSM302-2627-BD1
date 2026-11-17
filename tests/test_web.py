@@ -143,6 +143,23 @@ class TestWebUI(unittest.TestCase):
         self.assertEqual(code, 400)
         self.assertIn("Алдааны төрөл", body["error"])
 
+    def test_hold_and_count_race(self):
+        if self.ENGINE != "c":
+            self.skipTest("C engine only")
+        code, d = self.post("/api/start", dict(size=5, prod=1, cons=1, psleep=1, csleep=1, hold=5))
+        self.assertEqual(code, 400)                      # hold is 0..1 s
+        # hold 0 = real thread speed; 1P/1C without the mutex: only count races (review C1, M2)
+        self.post("/api/start", dict(size=5, prod=1, cons=1, psleep=0, csleep=0, hold=0, bug="no_mutex"))
+        deadline = time.time() + 6
+        while time.time() < deadline and not self.state()["sim"].get("count_errors"):
+            time.sleep(0.2)
+        s = self.state()["sim"]
+        self.assertEqual(s["hold"], 0)
+        self.assertGreater(s["count_errors"], 0)
+        self.post("/api/stop")
+        self.post("/api/reset")
+        self.assertTrue(gui.C_BIN.endswith("producer_consumer_ui"))   # never overwrites the CLI build
+
     def test_live_tune(self):
         code, _ = self.post("/api/tune", dict(speed=2))
         self.assertEqual(code, 400)                      # nothing running yet

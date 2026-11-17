@@ -1,7 +1,11 @@
 /*
  * ui.c — the same producer/consumer threads, driven by the web UI (src/gui.py).
  *
- *   ./producer_consumer --ui <size> <producers> <consumers> <prod_sleep> <cons_sleep> <speed> <paused> [bug 0..4]
+ *   ./producer_consumer --ui <size> <producers> <consumers> <prod_sleep> <cons_sleep> <speed> <paused> [bug 0..4] [hold]
+ *
+ *   hold (default 0.3 s, 0..1): ONLY in this UI mode, a thread stays in "producing" after it made
+ *   an item and in "consuming" after it took one, so a person can see the state. This is a real
+ *   sleep of the thread (it slows the threads down); hold 0 = the same speed as the book CLI.
  *
  * stdout (one line each, flushed):
  *   E I <who> <slot> <item> <t> <count> <err>   insert_item() just happened (E R ... for remove_item);
@@ -9,7 +13,7 @@
  *   S {json}                        a state snapshot, every 50 ms
  *   END                             all threads have been joined
  * stdin  (one command per line):
- *   pause | resume | step | stop | tune <prod_sleep|-> <cons_sleep|-> <speed|->
+ *   pause | resume | step | stop | tune <prod_sleep|-> <cons_sleep|-> <speed|-> [hold|-]
  *
  * The threads, semaphores and mutex are exactly the ones in buffer.c; this file
  * only adds pause/step, live speed changes and the printing.
@@ -27,14 +31,14 @@
 #include "buffer.h"
 #include "sim.h"
 
-#define HOLD 0.3      /* seconds the "producing" / "consuming" state stays visible */
+#define HOLD_DEFAULT 0.3   /* seconds a thread stays in "producing" / "consuming" (see above) */
 
 enum { ST_IDLE, ST_SLEEP, ST_PRODUCE, ST_WAIT, ST_CONSUME, ST_PAUSED, ST_STOPPED };
 static const char *ST_NAME[] = {"idle", "sleeping", "producing", "waiting", "consuming", "paused", "stopped"};
 
 static int np, nc;
-static double prod_sleep, cons_sleep, speed = 1.0;
-static pthread_mutex_t prm = PTHREAD_MUTEX_INITIALIZER;   /* guards the three numbers above */
+static double prod_sleep, cons_sleep, speed = 1.0, hold = HOLD_DEFAULT;
+static pthread_mutex_t prm = PTHREAD_MUTEX_INITIALIZER;   /* guards the four numbers above */
 static atomic_int paused = 0;
 static sem_t step_sem;
 static atomic_int state[2 * MAX_THREADS];
@@ -45,10 +49,19 @@ static atomic_int waitk[2 * MAX_THREADS];        /* WAIT_NONE / WAIT_SEM / WAIT_
 static atomic_int owner = -1;                    /* thread index holding the mutex, -1 = free */
 static atomic_long progress_ms = 0;              /* time of the last insert/remove */
 static atomic_int deadlocked = 0;
+static double dl_since = -1;                     /* reporter only: buffer_deadlocked() seen since */
 static const char *BUGS[] = {"none", "no_mutex", "no_empty", "no_full", "order"};
 
 void ui_waiting(int what) { atomic_store(&waitk[my_idx], what); }
 void ui_lock_owner(int has) { atomic_store(&owner, has ? my_idx : -1); }
+
+static double get_hold(void)
+{
+    pthread_mutex_lock(&prm);
+    double h = hold;
+    pthread_mutex_unlock(&prm);
+    return h;
+}
 
 static void get_params(double *ps, double *cs, double *sp)
 {
@@ -132,7 +145,7 @@ static void *producer(void *p)
         if (!sim_sleep(ps * rand_r(&w->seed) / (double)RAND_MAX, 1)) break;
         buffer_item item = rand_r(&w->seed) % 99 + 1;
         set_state(ST_PRODUCE);
-        if (!sim_sleep(HOLD, 0) || !checkpoint()) break;
+        if (!sim_sleep(get_hold(), 0) || !checkpoint()) break;
         set_state(ST_WAIT);
         if (insert_item(item) != 0) break;
     }
@@ -153,7 +166,7 @@ static void *consumer(void *p)
         set_state(ST_WAIT);
         if (remove_item(&item) != 0) break;
         set_state(ST_CONSUME);
-        if (!sim_sleep(HOLD, 0)) break;
+        if (!sim_sleep(get_hold(), 0)) break;
     }
     set_state(ST_STOPPED);
     return NULL;
@@ -174,7 +187,7 @@ static void snapshot(int stopped)
     for (int i = 0; i < n; i++)
         k += has[i] ? snprintf(b + k, sizeof b - k, "%s%d", i ? "," : "", slots[i])
                     : snprintf(b + k, sizeof b - k, "%snull", i ? "," : "");
-    k += snprintf(b + k, sizeof b - k, "],\"in_idx\":%d,\"out_idx\":%d,\"last\":", in, out);
+    k += snprintf(b + k, sizeof b - k, "],\"count\":%d,\"in_idx\":%d,\"out_idx\":%d,\"last\":", cnt, in, out);
     k += last < 0 ? snprintf(b + k, sizeof b - k, "null") : snprintf(b + k, sizeof b - k, "%d", last);
     k += snprintf(b + k, sizeof b - k, ",\"empty\":%d,\"full\":%d,\"mutex_locked\":%s,\"states\":{",
                   ev, fv, busy ? "true" : "false");
@@ -187,22 +200,26 @@ static void snapshot(int stopped)
         k += snprintf(b + k, sizeof b - k, "%s\"%c%d\":\"%s\"", i ? "," : "",
                       i < np ? 'P' : 'C', i < np ? i + 1 : i - np + 1, WK[atomic_load(&waitk[i])]);
     int ow = atomic_load(&owner);
-    /* deadlock (experiment "order"): the mutex holder is blocked on a semaphore and nothing
-       has happened for a second — nobody can ever get in to signal it */
-    if (!stopped && buffer_holder_blocked() && elapsed() - atomic_load(&progress_ms) / 1000.0 > 1.0 &&
-        !atomic_load(&paused))
-        atomic_store(&deadlocked, 1);
+    /* deadlock (experiment "order"), found by its structure: the mutex holder waits on a
+       semaphore that is 0 (buffer_deadlocked). Shown once that has held for 0.3 s with no
+       insert/remove in between, so a post that is just about to happen is not mistaken for it. */
+    if (!stopped && buffer_deadlocked()) {
+        double now = elapsed();
+        if (dl_since < 0 || atomic_load(&progress_ms) / 1000.0 > dl_since) dl_since = now;
+        if (now - dl_since >= 0.3) atomic_store(&deadlocked, 1);
+    } else if (!stopped) dl_since = -1;
     k += ow < 0 ? snprintf(b + k, sizeof b - k, "},\"owner\":null")
                 : snprintf(b + k, sizeof b - k, "},\"owner\":\"%c%d\"", ow < np ? 'P' : 'C', ow < np ? ow + 1 : ow - np + 1);
     k += snprintf(b + k, sizeof b - k, ",\"bug\":\"%s\",\"deadlock\":%s", BUGS[buffer_bug()],
                   atomic_load(&deadlocked) ? "true" : "false");
     double el = stopped && stopped_at >= 0 ? stopped_at : elapsed();
     snprintf(b + k, sizeof b - k,
-             ",\"produced\":%ld,\"consumed\":%ld,\"mutex_on\":%s,\"lost\":%ld,\"bad_reads\":%ld,\"paused\":%s,\"stopped\":%s,"
-             "\"speed\":%g,\"prod_sleep\":%g,\"cons_sleep\":%g,\"elapsed\":%.2f}\n",
+             ",\"produced\":%ld,\"consumed\":%ld,\"mutex_on\":%s,\"lost\":%ld,\"bad_reads\":%ld,\"count_errors\":%ld,"
+             "\"paused\":%s,\"stopped\":%s,\"speed\":%g,\"prod_sleep\":%g,\"cons_sleep\":%g,\"hold\":%g,\"elapsed\":%.3f}\n",
              (long)atomic_load(&produced), (long)atomic_load(&consumed),
              buffer_mutex_on() ? "true" : "false", (long)atomic_load(&lost), (long)atomic_load(&bad_reads),
-             atomic_load(&paused) ? "true" : "false", stopped ? "true" : "false", sp, ps, cs, el);
+             (long)atomic_load(&count_errors),
+             atomic_load(&paused) ? "true" : "false", stopped ? "true" : "false", sp, ps, cs, get_hold(), el);
     line(b);
 }
 
@@ -227,31 +244,31 @@ static int num(const char *s, double lo, double hi, double *out)
 
 static void tune(char *args)
 {
-    char a[32] = "-", b[32] = "-", c[32] = "-";
-    sscanf(args, "%31s %31s %31s", a, b, c);
-    double ps, cs, sp;
+    char a[32] = "-", b[32] = "-", c[32] = "-", d[32] = "-";
+    sscanf(args, "%31s %31s %31s %31s", a, b, c, d);
+    double ps, cs, sp, h = get_hold();
     get_params(&ps, &cs, &sp);
     if ((strcmp(a, "-") && num(a, 0, 10, &ps)) || (strcmp(b, "-") && num(b, 0, 10, &cs)) ||
-        (strcmp(c, "-") && num(c, 0.25, 4, &sp))) {
+        (strcmp(c, "-") && num(c, 0.25, 4, &sp)) || (strcmp(d, "-") && num(d, 0, 1, &h))) {
         fprintf(stderr, "ERR bad tune: %s\n", args);
         return;
     }
     pthread_mutex_lock(&prm);
-    prod_sleep = ps; cons_sleep = cs; speed = sp;
+    prod_sleep = ps; cons_sleep = cs; speed = sp; hold = h;
     pthread_mutex_unlock(&prm);
 }
 
 int ui_main(int argc, char *argv[])
 {
-    double size, p, c, ps, cs, sp, pa, bg = 0;
-    if ((argc != 7 && argc != 8) || (argc == 8 && num(argv[7], 0, 4, &bg)) || num(argv[0], 1, BUFFER_MAX, &size) || num(argv[1], 1, MAX_THREADS, &p) ||
+    double size, p, c, ps, cs, sp, pa, bg = 0, h = HOLD_DEFAULT;
+    if (argc < 7 || argc > 9 || (argc >= 8 && num(argv[7], 0, 4, &bg)) || (argc == 9 && num(argv[8], 0, 1, &h)) || num(argv[0], 1, BUFFER_MAX, &size) || num(argv[1], 1, MAX_THREADS, &p) ||
         num(argv[2], 1, MAX_THREADS, &c) || num(argv[3], 0, 10, &ps) || num(argv[4], 0, 10, &cs) ||
         num(argv[5], 0.25, 4, &sp) || num(argv[6], 0, 1, &pa)) {
         fprintf(stderr, "usage: --ui <size 1..%d> <producers> <consumers> <prod_sleep> "
-                        "<cons_sleep> <speed 0.25..4> <paused 0|1> [bug 0..4]\n", BUFFER_MAX);
+                        "<cons_sleep> <speed 0.25..4> <paused 0|1> [bug 0..4] [hold 0..1]\n", BUFFER_MAX);
         return 1;
     }
-    np = (int)p; nc = (int)c; prod_sleep = ps; cons_sleep = cs; speed = sp;
+    np = (int)p; nc = (int)c; prod_sleep = ps; cons_sleep = cs; speed = sp; hold = h;
     atomic_store(&paused, pa != 0);
     if (buffer_init((int)size) != 0 || sem_init(&step_sem, 0, 0) != 0) {
         fprintf(stderr, "ERR init failed\n");

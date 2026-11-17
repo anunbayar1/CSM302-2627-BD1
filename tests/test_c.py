@@ -49,6 +49,38 @@ class TestPthreadsVersion(unittest.TestCase):
         r = self.run_bin("--bug", "nonsense", 1, 1, 1)
         self.assertEqual(r.returncode, 1)
 
+    def test_count_race_one_producer_one_consumer(self):
+        # 1P/1C without the mutex: in/out are touched by one thread each, so no slot is lost,
+        # but count++ / count-- race. That must be reported, not called CONSISTENT (review C1).
+        r = self.run_bin("-q", "--bug", "no-mutex", 1, 1, 1, 0)
+        self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+        self.assertIn("INCONSISTENT", r.stdout)
+        self.assertRegex(r.stdout, r"count_errors=[1-9]")
+
+    def test_short_deadlock_found(self):
+        # a run shorter than any timeout must still be reported as DEADLOCK (review C2)
+        for _ in range(3):
+            r = self.run_bin("-q", "--bug", "order", 0.25, 2, 2, 0.05)
+            self.assertEqual(r.returncode, 3, r.stdout + r.stderr)
+            self.assertIn("DEADLOCK", r.stdout)
+
+    def test_count_matches_items(self):
+        r = self.run_bin("-q", 1, 4, 4, 0)
+        self.assertRegex(r.stdout, r"in_buffer=(\d+) count=\1 -> CONSISTENT")
+
+    def test_buffer_size_rebuild(self):
+        # make BUFFER_SIZE=N must rebuild by itself (review M1); restore the default afterwards
+        try:
+            subprocess.run(["make", "-s", "BUFFER_SIZE=7"], cwd=C_DIR, check=True)
+            self.assertIn("BUFFER_SIZE=7", self.run_bin("-q", 0.1, 1, 1).stdout)
+        finally:
+            subprocess.run(["make", "-s"], cwd=C_DIR, check=True)
+        self.assertIn("BUFFER_SIZE=5", self.run_bin("-q", 0.1, 1, 1).stdout)
+        r = subprocess.run(["make", "-s", "BUFFER_SIZE=0", "BIN=/tmp/pc_bad_size"], cwd=C_DIR,
+                           capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("BUFFER_SIZE must be 1..20", r.stderr)
+
     def test_bad_arguments_rejected(self):
         for args in [(), (1, 2), (0, 1, 1), ("abc", 1, 1), (1, 0, 1), (1, 1, 101), (1, 1, 1, -1)]:
             r = self.run_bin(*args)

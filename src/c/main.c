@@ -29,7 +29,7 @@
 
 atomic_int  running = 1;
 atomic_long produced = 0, consumed = 0;          /* changed only under the buffer mutex */
-atomic_long lost = 0, bad_reads = 0;
+atomic_long lost = 0, bad_reads = 0, count_errors = 0;
 static atomic_long last_progress_ms = 0;          /* for the deadlock report */
 static const char *BUG_NAMES[] = {"none", "no-mutex", "no-empty", "no-full", "order"};
 _Thread_local char me[16] = "main";
@@ -55,17 +55,22 @@ void sim_lock_owner(int has) { if (ui_mode) ui_lock_owner(has); }
 
 static void progress(void) { atomic_store(&last_progress_ms, (long)(elapsed() * 1000)); }
 
-static const char *race_text(int err)
+static const char *race_text(int err)        /* err: bit mask of RACE_* */
 {
-    return err == RACE_OVERWRITE ? "   !! slot was still full -> an item is lost"
-         : err == RACE_EMPTY_READ ? "   !! slot was empty -> read garbage" : "";
+    static _Thread_local char b[160];
+    b[0] = '\0';
+    if (err & RACE_OVERWRITE)  strcat(b, "   !! slot was still full -> an item is lost");
+    if (err & RACE_EMPTY_READ) strcat(b, "   !! slot was empty -> read garbage");
+    if (err & RACE_COUNT)      strcat(b, "   !! count out of range -> an update of count was lost");
+    return b;
 }
 
 void sim_on_insert(buffer_item item, int slot, int count, int err)
 {
     atomic_fetch_add(&produced, 1);
     progress();
-    if (err) atomic_fetch_add(&lost, 1);
+    if (err & RACE_OVERWRITE) atomic_fetch_add(&lost, 1);
+    if (err & RACE_COUNT) atomic_fetch_add(&count_errors, 1);
     if (ui_mode) { ui_on_insert(item, slot, count, err); return; }
     if (quiet) return;
     pthread_mutex_lock(&print_lock);
@@ -78,7 +83,8 @@ void sim_on_remove(buffer_item item, int slot, int count, int err)
 {
     atomic_fetch_add(&consumed, 1);
     progress();
-    if (err) atomic_fetch_add(&bad_reads, 1);
+    if (err & RACE_EMPTY_READ) atomic_fetch_add(&bad_reads, 1);
+    if (err & RACE_COUNT) atomic_fetch_add(&count_errors, 1);
     if (ui_mode) { ui_on_remove(item, slot, count, err); return; }
     if (quiet) return;
     pthread_mutex_lock(&print_lock);
@@ -206,7 +212,11 @@ int main(int argc, char *argv[])
     }
 
     /* 2. Initialize buffer */
-    if (buffer_init(BUFFER_SIZE) != 0) { perror("buffer_init"); return 1; }
+    if (buffer_init(BUFFER_SIZE) != 0) {
+        fprintf(stderr, "error: cannot create the buffer (BUFFER_SIZE=%d must be 1..%d, "
+                        "or sem_init / pthread_mutex_init failed)\n", BUFFER_SIZE, BUFFER_MAX);
+        return 1;
+    }
     buffer_set_bug(bug, 100 * 1000L);            /* without the mutex: 0.1 ms pause in the critical section */
     clock_gettime(CLOCK_MONOTONIC, &t0); t0_set = 1;
     printf("BUFFER_SIZE=%d producers=%ld consumers=%ld run=%.2fs max_nap=%.2fs%s%s\n",
@@ -232,20 +242,32 @@ int main(int argc, char *argv[])
     struct timespec ts = { (time_t)run_s, (long)((run_s - (time_t)run_s) * 1e9) };
     while (nanosleep(&ts, &ts) == -1 && errno == EINTR) {}
 
-    /* 6. Exit — stop the threads, wait for them, then check that nothing was lost */
+    /* 6. Exit — stop the threads, wait for them, then check that nothing was lost.
+       Deadlock is found by its structure: the mutex holder waits on a semaphore that is 0
+       (buffer_deadlocked). It is confirmed once more 0.1 s later, with no progress in between,
+       so a thread that is just about to post the semaphore is not mistaken for a deadlock. */
+    int deadlock = 0;
+    if (buffer_deadlocked()) {
+        long before = produced + consumed;
+        struct timespec w = {0, 100 * 1000000L};
+        nanosleep(&w, NULL);
+        deadlock = buffer_deadlocked() && produced + consumed == before;
+    }
     double idle = elapsed() - atomic_load(&last_progress_ms) / 1000.0;
-    int deadlock = buffer_holder_blocked() && idle > 0.3;
     atomic_store(&running, 0);
     for (int i = 0; i < made; i++) pthread_join(tid[i], NULL);
 
-    int left = buffer_count();
-    int ok = produced - consumed == left && lost == 0 && bad_reads == 0 && !deadlock;
-    printf("\nproduced=%ld consumed=%ld in_buffer=%d -> %s\n",
-           (long)produced, (long)consumed, left, deadlock ? "DEADLOCK" : ok ? "CONSISTENT" : "INCONSISTENT");
+    int left = buffer_count();          /* items really in the slots */
+    int cnt = buffer_counter();         /* the shared variable count */
+    int ok = produced - consumed == left && cnt == left && lost == 0 && bad_reads == 0 &&
+             count_errors == 0 && !deadlock;
+    printf("\nproduced=%ld consumed=%ld in_buffer=%d count=%d -> %s\n",
+           (long)produced, (long)consumed, left, cnt, deadlock ? "DEADLOCK" : ok ? "CONSISTENT" : "INCONSISTENT");
     if (deadlock)
-        printf("DEADLOCK: no progress for the last %.1fs (a thread holds the mutex while it waits on a semaphore)\n", idle);
+        printf("DEADLOCK: no progress for the last %.2fs (a thread holds the mutex while it waits on a semaphore)\n", idle);
     else if (bug || !ok)
-        printf("errors: lost_items=%ld bad_reads=%ld\n", (long)lost, (long)bad_reads);
+        printf("errors: lost_items=%ld bad_reads=%ld count_errors=%ld count=%d (must be %d)\n",
+               (long)lost, (long)bad_reads, (long)count_errors, cnt, left);
     buffer_destroy();
     return deadlock ? 3 : ok ? 0 : 2;
 }
