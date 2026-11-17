@@ -294,6 +294,23 @@ main{grid-template-columns:clamp(260px,21vw,320px) minmax(0,1fr)!important;grid-
 @media (max-height:740px){.chk2 h3{display:none}.grp{padding:6px 0}}
 @media (max-width:1000px){main{grid-template-columns:1fr!important;grid-template-rows:auto auto 340px!important}.side{grid-row:auto}}
 
+
+/* ---------- stage positions: everything lines up on the buffer's centre line ---------- */
+.stage{align-items:center}
+.col{justify-content:center;max-height:100%}
+.col .colhead{justify-content:flex-start}
+.col:last-child .colhead{justify-content:flex-end}
+.threads{max-height:calc(100% - 30px)}
+.flow{position:relative;height:100%;color:transparent;font-size:0}
+.flow::before{content:"";position:absolute;left:2px;right:8px;top:50%;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,rgba(63,214,154,.15),rgba(63,214,154,.8))}
+.flow::after{content:"";position:absolute;right:2px;top:50%;width:9px;height:9px;margin-top:-4px;
+  border-top:2px solid var(--green);border-right:2px solid var(--green);transform:rotate(45deg)}
+.flow + .col::before{display:none}
+.center + .flow::before{background:linear-gradient(90deg,rgba(111,149,255,.15),rgba(111,149,255,.8))}
+.center + .flow::after{border-color:var(--blue)}
+.th{border-left-width:3px}
+
 /* ---------- log ---------- */
 .logc{display:flex;flex-direction:column;min-height:0;padding:10px 14px 12px}
 .logbar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
