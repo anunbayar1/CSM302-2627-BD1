@@ -1,8 +1,12 @@
 # V-1-12 – Producer–Consumer Problem (Buffer Animation)
 
-**Хичээл:** F.CSM302 Үйлдлийн систем
+**Сургууль:** Шинжлэх Ухаан Технологийн Их Сургууль, Мэдээлэл, Холбооны Технологийн Сургууль
+
+**Хичээл:** F.CSM302 Үйлдлийн систем · Бие даалт 2 (Final)
 
 **Багийн код (хуваарилалтын код):** V-1-12
+
+**Шалгасан багш:** Г. Ганбат /F.CS10/
 
 **Сурах бичгийн бүлэг:** 7-р бүлэг – Synchronization Examples (Silberschatz, Galvin, Gagne – Operating System Concepts, 10th ed.)
 
@@ -10,21 +14,33 @@
 
 ## Багийн гишүүд
 
-| Оюутны код |      Нэр     |
-|------------|--------------|
-| B241910012 | Н.Баасандорж |
-| B241910035 | Э.Анунбаяр   |
-| B222230020 | ........... |
-| B242270014 | ........... |
-| B232270028 | ........... |
+| Оюутны код | Нэр |
+|------------|-----|
+| B241910012 | Н. Баасандорж |
+| B241910035 | Э. Анунбаяр |
+| B222230020 | Э. Ганболд |
+| B242270014 | У. Ариунболд |
+| B232270028 | Г. Оюунбатбаатар |
 
 ## Зорилго
 
-Bounded buffer (цагираг дараалал)-ийг `empty` / `full` тоолох семафор болон `pthread_mutex_t`-ээр хамгаалж, C / POSIX Pthreads дээр хэрэгжүүлэх. Producer, consumer бүр тусдаа OS thread бөгөөд тэдний буфер руу бичих, буферээс уншихыг browser-based интерактив UI дээр алхам алхмаар buffer animation-оор харуулна.
+Bounded buffer (цагираг дараалал)-ийг `empty` / `full` тоолох семафор болон `pthread_mutex_t`-ээр хамгаалж, C / POSIX Pthreads дээр хэрэгжүүлэх. Producer, consumer бүр тусдаа OS thread бөгөөд тэдний буфер руу бичих, буферээс уншихыг browser-based интерактив UI дээр алхам алхмаар buffer animation-оор харуулна. Синхрончлолын 4 сонгодог алдаа (race condition, overflow, underflow, deadlock)-г санаатай гаргаж, программ өөрөө илрүүлдгийг харуулна.
+
+### Алгоритм
+
+| Алхам | Producer | Consumer |
+|:-:|---|---|
+| 1 | `wait(empty)` – сул нүд хүлээх | `wait(full)` – дүүрэн нүд хүлээх |
+| 2 | `lock(mutex)` – critical section-д орох | `lock(mutex)` – critical section-д орох |
+| 3 | `buffer[in] = item` | `item = buffer[out]` |
+| 4 | `unlock(mutex)` | `unlock(mutex)` |
+| 5 | `signal(full)` – full + 1 | `signal(empty)` – empty + 1 |
+
+Семафор 0 бол thread блоклогдоно. Mutex нэг удаад зөвхөн нэг thread-ийг critical section-д оруулна.
 
 ## Quick Start
 
-**Шаардлага:** Linux (Debian / Ubuntu), `gcc`, `make`, Python 3. Гадаад сан шаардлагагүй.
+**Шаардлага:** Linux (Debian / Ubuntu) эсвэл Windows 10/11 дээрх WSL, `gcc`, `make`, Python 3 (гадаад сан шаардлагагүй), хөтөч (Chrome, Edge, Firefox).
 
 ```
 # 0. Шаардлагатай багц
@@ -35,20 +51,32 @@ git clone https://github.com/anunbayar1/CSM302-2627-BD1.git
 cd CSM302-2627-BD1
 
 # 2. Ажиллуулах (C программыг автоматаар compile хийж, хөтөч нээгдэнэ)
+make -C src/c
 python3 src/gui.py
-# → http://127.0.0.1:8765/
+# → http://127.0.0.1:8765/   (унтраахдаа терминалд Ctrl+C)
 
 # 3. Тушаалын мөрөөс (номын дагуу)
+<<<<<<< HEAD
 make -C src/c
+=======
+>>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 make -C src/c BUFFER_SIZE=10         # өөр хэмжээ (1–20): өөрчлөгдвөл өөрөө дахин хөрвүүлнэ
 ./src/c/producer_consumer 5 3 3      # <унтах сек> <producers> <consumers>
 ./src/c/producer_consumer --bug no-mutex 5 3 3   # туршилт: no-mutex | no-empty | no-full | order
 
+# Хурдан жишээ (-q: товч гаралт)
+./src/c/producer_consumer -q 2 3 3 0.05
+# produced=217 consumed=216 in_buffer=1 count=1 -> CONSISTENT
+./src/c/producer_consumer -q --bug order 2 2 2 0.05
+# DEADLOCK: no progress for the last 2.09s
+
 # 4. Автомат тест (GUI шаардахгүй)
-python3 -m unittest discover -s tests
-make -C src/c test
-make -C src/c tsan
+python3 -m unittest discover -s tests   # Ran 48 tests … OK (skipped=2)
+make -C src/c test                      # ALL TESTS PASSED
+make -C src/c tsan                      # TSAN: no data race reported
 ```
+
+> Тоонууд ажиллуулах бүрт өөр гарна. Гол нь `CONSISTENT` эсвэл `DEADLOCK` гэсэн дүгнэлт.
 
 ### Windows дээр
 
@@ -74,6 +102,13 @@ py src\gui.py
 
 Энэ горимд C · Pthreads хуудас ажиллахгүй (нүүр хуудас дээр шар анхааруулга гарна), учир нь C программ POSIX семафор (`sem_timedwait`) ашигладаг. C горимыг ажиллуулахын тулд А хувилбарыг ашиглана. Python тестийг `py -m unittest tests.test_buffer` командаар ажиллуулж болно.
 
+### Туршсан орчин
+
+* Debian (gcc, GNU Make, Python 3.13)
+* Ubuntu 24.04 (gcc 13.3.0, Make 4.3, Python 3.13)
+* Windows 11 WSL (Python 3.14), GitHub-аас шинээр татаж шалгасан
+* Хөрвүүлэлт: `gcc -Wall -Wextra -O2 -std=c11 -pthread`, сануулгагүй
+
 ## Хавтасны бүтэц
 
 | Зам | Агуулга |
@@ -83,33 +118,108 @@ py src\gui.py
 | `src/bounded_buffer.py` | Python хэрэгжүүлэлт (шуудангийн жишээтэй горимд) |
 | `src/ui/` | `home.html` (горим сонгох), `mail.html` (шуудангийн жишээ), `raw.html` (C · Pthreads), `tour.json` (дуут тайлбар) |
 | `tests/` | `test_buffer.py`, `test_c.py`, `test_web.py` (нийт 48 автомат тест) |
+<<<<<<< HEAD
 | `docs/` | `V-1-12_Manual.pdf` – гарын авлага |
+=======
+| `docs/` | Manual, Final Report, Poster (доорх «Баримт бичиг» хэсгийг үз) |
+>>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 | `tools/` | `make_voice.py` – дуут тайлбарын аудио үүсгэгч (edge-tts) |
 
 ## Үндсэн боломжууд
 
 * Нүүр хуудаснаас 2 горим сонгоно:
   * **Python · жишээтэй**: шуудан зөөгч, хэрэглэгч, шуудангийн хайрцгийн жишээгээр, монгол дуут тайлбартай.
-  * **C · Pthreads**: жишээгүй, C программын бодит ажиллагаа: producers → buffer → consumers.
+  * **C · Pthreads**: жишээгүй, C программын бодит ажиллагаа: producers → буфер → consumers.
 * BUFFER_SIZE (1–20), producer, consumer-ийн тоо (1–10), хурдыг тохируулна. Хурдыг ажиллаж байх үед ч өөрчилж болно.
-* Start / Pause / Step / Stop / Reset удирдлага.
+
+  | Тохиргоо | Хүрээ | Анхдагч |
+  |---|---|---|
+  | Буферийн хэмжээ (`BUFFER_SIZE`) | 1–20 | 5 |
+  | Producer, consumer-ийн тоо | 1–10 | 2, 2 |
+  | Унтах хугацаа (сек) | 0–3 | 1.0 |
+  | Хурд | 0.25–4× | 1× |
+  | Hold: төлөвийг харуулах удаашрал (0 = бодит хурд) | 0–1 с | 0.3 |
+  | Алдааны горим | 5 сонголт (зөв код + 4 алдаа) | зөв код |
+
+* Start / Pause / Step / Stop / Reset удирдлага. Stop дарахад эцсийн дүн лог дээр гарна.
 * `empty`, `full` семафорын утга, `mutex`-ийн эзэмшигч болон хүлээж буй thread-үүд, `in` / `out` заагч.
+<<<<<<< HEAD
 * `produced − consumed = buffer = count ✓` тууштай байдлын шалгалт (`count` нь C-ийн хувьсагч өөрөө).
 * Буферийн дээр тэмдэглэгээний тайлбар, баруун дээд буланд animation-ийн хоцрогдол (мс). 300 мс-ээс их хоцрох нислэгийг алгасаж, нүд үргэлж C-ийн бодит төлвийг харуулна.
+=======
+* `produced − consumed = buffer = count ✓` тууштай байдлын шалгалт (`count` нь C-ийн хувьсагч өөрөө). Ногоон бол бүх тоо таарч байна, улаан бол алдаа гарсан.
+* Буферийн дээр тэмдэглэгээний тайлбар (legend), баруун дээд буланд animation-ийн хоцрогдол (мс). 300 мс-ээс их хоцрох нислэгийг алгасаж, нүд үргэлж C-ийн бодит төлвийг харуулна.
+>>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 * **Алдааны туршилт** (C хуудасны «алдаа» сонголт, CLI `--bug`): зөв кодоос нэг алдаа гаргаж, юу болохыг харуулна. Алдаа бүр улаанаар тэмдэглэгдэж, лог болон эцсийн дүнд гарна.
 
-  | Сонголт | Кодын алдаа | Үр дагавар |
+  | Сонголт | Кодын алдаа | Үр дагавар / хүлээгдэх дүгнэлт |
   |---|---|---|
+<<<<<<< HEAD
   | `no-mutex` | `pthread_mutex_lock/unlock` байхгүй | race condition: хоёр thread нэг нүд рүү бичиж item алга болно. 1P/1C үед зөвхөн `count++`/`count--` эвдэрнэ (`count_errors`) |
   | `no-empty` | producer `sem_wait(&empty)` хийхгүй | overflow: уншаагүй item дээр дарж бичнэ |
   | `no-full` | consumer `sem_wait(&full)` хийхгүй | underflow: хоосон нүднээс уншина |
   | `order` | `mutex_lock` → `sem_wait` дараалал буруу | deadlock: mutex барьсан thread 0 утгатай семафор хүлээж, бусад нь mutex хүлээнэ (бүтцээр нь илрүүлнэ, run богино ч гэсэн) |
+=======
+  | `no-mutex` | `pthread_mutex_lock/unlock` байхгүй | race condition: хоёр thread нэг нүд рүү бичиж item алга болно. 1P/1C үед зөвхөн `count++`/`count--` эвдэрнэ (`count_errors`) → `INCONSISTENT` |
+  | `no-empty` | producer `sem_wait(&empty)` хийхгүй | overflow: уншаагүй item дээр дарж бичнэ → `INCONSISTENT` |
+  | `no-full` | consumer `sem_wait(&full)` хийхгүй | underflow: хоосон нүднээс уншина → `INCONSISTENT` |
+  | `order` | `mutex_lock` → `sem_wait` дараалал буруу | deadlock: mutex барьсан thread 0 утгатай семафор хүлээж, бусад нь mutex хүлээнэ (бүтцээр нь илрүүлнэ, run богино ч гэсэн) → `DEADLOCK` |
+>>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 * producer / consumer sleep (0–3 сек), хурд (0.25–4×) болон hold (0–1 сек)-ыг гулсуураар 0.05-ын нарийвчлалтай, ажиллаж байх үед тохируулна.
 * Лог-ийг `.txt` эсвэл `.csv` хэлбэрээр татаж авах.
 
+## Туршилтын үр дүн
+
+| Metric | Утга |
+|---|---|
+| Зөв кодын run CONSISTENT (5 тохиргоо × 10 run) | **50 / 50** |
+| Алдааны горим илэрсэн (5 горим × 5 run) | **25 / 25** |
+| Автомат тест | **48 / 48** PASS |
+| ThreadSanitizer race | **0** |
+| Хамгийн их ачаалал (40 thread, 1 с) | 288 822 item, алдаагүй |
+
+## БД1 → БД2 (Final): шүүмжээр хийсэн сайжруулалт
+
+Харилцан шүүмжээр 11 асуудал илэрсэн (10 нь зөвшөөрсөн, 1 нь хэсэгчлэн). Гол засварууд:
+
+| Priority | Асуудал | Өмнө → Дараа |
+|---|---|---|
+| Critical | Mutex-гүй 1P/1C үед `count` эвдэрсэн ч `CONSISTENT` гэж дүгнэдэг байсан | `CONSISTENT` → `INCONSISTENT` (count-ийн хүрээ ба эцсийн тэнцлийг шалгана) |
+| Major | 0.25 с-ийн богино run-д deadlock-ийг илрүүлдэггүй | 0/3 → 196/200 `DEADLOCK` (бүтцээр илрүүлнэ) |
+| Major | `make BUFFER_SIZE=10` хэмжээг өөрчилдөггүй | 5 хэвээр → 10 (`.buffer_size` stamp) |
+| Major | Hold нь «зөвхөн дүрслэл» гэж буруу бичигдсэн | 0–1 с тохируулдаг болж, 0 = бодит хурд |
+| Major | UI-ийн хоцрогдол тоолуураас зөрдөг | ~1 с → ≤ 0.3 с |
+| Major | Гишүүдийн нэр дутуу, баримт зөрүүтэй | README, Manual, тайланг нэгтгэв |
+| Minor | Legend байхгүй, deadlock үед «running» гэж харагддаг | Legend, deadlock төлөв нэмэв |
+| Minor | `BUFFER_SIZE=0` шалгалтгүй | хөрвүүлэх үед `#error` |
+| Minor | `make tsan` exit кодыг нуудаг | `pipefail`, race гарвал exit 66 |
+| Minor | Тестэд `ResourceWarning` 3 | Pipe-ийг хаадаг болсон: 3 → 0 |
+
+Тест 42-оос 48 болсон.
+
+### Зохиомжийн шийдвэр
+
+| Шийдвэр | Шалтгаан |
+|---|---|
+| `sem_timedwait`, `pthread_mutex_timedlock` (50 мс) | Stop үед блоклогдсон thread ч гарч, программ цэвэр зогсоно. |
+| Нүд бүрийн `occ[]` шалгагч | Алдагдсан болон хоосноос уншсан item-ийг тоолно. Алгоритмд нөлөөлөхгүй. |
+| Deadlock-ийг бүтцээр илрүүлэх | Хугацааны босго удаан программыг deadlock гэж андуурдаг. |
+
 ## Баримт бичиг
 
-* [Гарын авлага (Manual PDF)](docs/V-1-12_Manual.pdf)
+* [Гарын авлага (Manual)](docs/V-1-12_Manual.docx)
+* [Final Report](docs/V-1-12_Final_Report.docx)
+* [Poster](docs/V-1-12_Poster.pdf)
+
+## Асуудал гарвал
+
+| Асуудал | Шийдэл |
+|---|---|
+| `gcc` эсвэл `make` олдсонгүй | `sudo apt install build-essential` |
+| C хуудас шар анхааруулгатай | WSL эсвэл Linux дээр ажиллуулна |
+| Хөтөч өөрөө нээгдэхгүй | Терминалд хэвлэгдсэн хаягийг гараар нээнэ |
+| `DEADLOCK` эсвэл алдаа гараад байна | Алдааны горимд «зөв код» сонгоод Reset дарна |
+| Ажиллаж байхад Эхлүүлэх дарахад алдаа | Эхлээд Stop эсвэл Reset дарна |
 
 ## Хэрэглэсэн бэлэн код, сан, AI
 
@@ -126,5 +236,15 @@ py src\gui.py
 * Хэт хурдан үед (sleep 0, hold 0) сервер сүүлийн 5000 үйл явдлыг л хадгалах тул логт `... N events skipped` гарна. Тоолуур ба эцсийн дүн үнэн хэвээр.
 * `no-mutex` туршилтад race condition-ийг харагдахуйц болгохын тулд critical section дотор түр завсар (UI: 40 мс, CLI: 0.1 мс) нэмсэн. Энэ нь thread-ийг тэр мөчид өөр thread тасалдуулсныг (preemption) дуурайлгана. Бусад горимд энэ завсар байхгүй.
 * Алдаа илрүүлэхэд нүд бүрт дүүрэн / хоосон эсэхийг тэмдэглэх атомар шалгагч (`occ[]`), `0 ≤ count ≤ BUFFER_SIZE` шалгалт, төгсгөлд `count = буферт байгаа item` шалгалт ашигладаг. Эдгээр нь алгоритмын хэсэг биш, зөвхөн хэмжилт.
+<<<<<<< HEAD
+=======
+* ThreadSanitizer нь зөвхөн тухайн ажиллагаанд race олоогүйг баталгаажуулна.
+>>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 * UI 50 мс тутам төлөв уншдаг тул `empty + full` түр зуур BUFFER_SIZE-аас бага харагдаж болно (thread `sem_wait`-ийн дараа, `sem_post`-оос өмнө байх үед). Энэ нь алдаа биш.
 * Дуут тайлбарын аудиог `tools/make_voice.py` (интернет шаардлагатай) үүсгэнэ. Аудио байхгүй бол хөтчийн хоолойг ашиглана.
+
+## Ашигласан материал
+
+1. A. Silberschatz, P. B. Galvin, G. Gagne, *Operating System Concepts*, 10th ed., Wiley, 2018, ch. 7.1.1, Programming Project 4.
+2. F.CSM302 Бие даалт 2-ын удирдамж; Харилцан шүүмж V-1-12.
+3. POSIX man pages: `pthread_create(3)`, `sem_init(3)`, `sem_timedwait(3)`.
