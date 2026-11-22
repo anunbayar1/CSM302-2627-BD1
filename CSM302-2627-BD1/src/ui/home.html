@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Producer–Consumer · БД1</title>
+<link rel="stylesheet" href="/fonts/fonts.css">
+<style>
+:root{
+  --sans:"IBM Plex Sans",system-ui,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"DejaVu Sans Mono",monospace;
+  --bg:#0c1222; --ink:#eef2fa; --muted:#93a0bb; --line:rgba(255,255,255,.09);
+  --glass:rgba(255,255,255,.045); --glass-hi:rgba(255,255,255,.08);
+  --green:#3fd69a; --blue:#6f95ff; --amber:#ffc35a; --mail:#4a62e6;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;color:var(--ink);font:16px/1.5 var(--sans);display:flex;flex-direction:column;
+  background:
+    radial-gradient(60vw 50vh at 8% 18%, rgba(63,214,154,.16), transparent 70%),
+    radial-gradient(60vw 50vh at 92% 22%, rgba(111,149,255,.20), transparent 70%),
+    radial-gradient(70vw 50vh at 50% 110%, rgba(255,195,90,.10), transparent 70%),
+    var(--bg)}
+main{width:100%;max-width:1160px;margin:auto;padding:clamp(18px,4vh,56px) 24px clamp(10px,2vh,24px);text-align:center}
+.kicker{display:inline-block;font:500 13.5px var(--sans);color:var(--muted);padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--glass)}
+h1{font-size:clamp(34px,min(5vw,7.4vh),66px);line-height:1.04;margin:clamp(10px,2vh,18px) 0 8px;letter-spacing:-.035em;font-weight:700}
+h1 span{background:linear-gradient(90deg,var(--green),#9fe8ff 50%,var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{margin:0 auto;color:var(--muted);font-size:clamp(15px,2vh,18px);max-width:34em}
+.pipe{position:relative;display:flex;align-items:center;justify-content:center;gap:clamp(14px,2vw,28px);margin:clamp(26px,5vh,52px) auto clamp(30px,5.4vh,54px);max-width:880px}
+.node{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;font:600 13px var(--mono)}
+.node .ic{width:clamp(52px,7.5vh,68px);height:clamp(52px,7.5vh,68px);border-radius:20px;display:grid;place-items:center}
+.node.p .ic{background:rgba(63,214,154,.14);box-shadow:inset 0 0 0 1.5px rgba(63,214,154,.5);color:var(--green)}
+.node.c .ic{background:rgba(111,149,255,.14);box-shadow:inset 0 0 0 1.5px rgba(111,149,255,.5);color:var(--blue)}
+.node.p{color:var(--green)} .node.c{color:var(--blue)}
+.node svg{width:55%;height:55%}
+.buf{position:relative;flex:1;max-width:560px;padding:12px;border-radius:20px;background:var(--glass);border:1px solid var(--line)}
+.slots{display:grid;grid-template-columns:repeat(8,1fr);gap:7px}
+.slots i{height:clamp(36px,6vh,54px);border-radius:10px;border:1.5px dashed rgba(255,255,255,.16);transition:background .3s,border-color .3s,box-shadow .3s}
+.slots i.on{background:linear-gradient(180deg,#ffe2a1,#ffc35a);border:1.5px solid #ffc35a;box-shadow:0 0 18px rgba(255,195,90,.35)}
+.buflabel{position:absolute;left:0;right:0;top:-22px;font:500 12px var(--mono);color:var(--muted)}
+.sems{position:absolute;left:0;right:0;bottom:-26px;display:flex;justify-content:center;gap:18px;font:500 12.5px var(--mono);color:var(--muted)}
+.sems b{color:var(--ink);font-weight:600}
+.dot{position:absolute;left:0;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--amber);box-shadow:0 0 14px var(--amber);opacity:0;pointer-events:none}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:18px;text-align:left}
+.card{position:relative;display:flex;gap:18px;align-items:center;padding:clamp(16px,2.6vh,24px);border-radius:20px;text-decoration:none;color:inherit;
+  background:var(--glass);border:1px solid var(--line);transition:background .2s,border-color .2s,transform .2s}
+.card:hover{background:var(--glass-hi);transform:translateY(-2px)}
+.card.py:hover{border-color:rgba(74,98,230,.8)} .card.c:hover{border-color:rgba(63,214,154,.7)}
+.card:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.art{flex:none;width:clamp(84px,11vh,112px);height:clamp(84px,11vh,112px);border-radius:18px;display:grid;place-items:center}
+.py .art{background:linear-gradient(145deg,#5068ec,#2c3ca6)} .c .art{background:linear-gradient(145deg,#1b2a3f,#0d1626);box-shadow:inset 0 0 0 1px rgba(63,214,154,.35)}
+.art svg{width:66%;height:66%}
+.card h2{margin:0;font-size:clamp(19px,2.6vh,23px);letter-spacing:-.01em}
+.card p{margin:4px 0 10px;color:var(--muted);font-size:15px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{font-size:12.5px;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.06);color:#c9d3e6}
+.arrow{margin-left:auto;flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);transition:background .2s,transform .2s}
+.card:hover .arrow{transform:translateX(3px)} .py:hover .arrow{background:var(--mail)} .c:hover .arrow{background:#1f8f66}
+.arrow svg{width:18px;height:18px}
+.warn{display:none;margin:0 0 8px;padding:6px 10px;border-radius:8px;background:rgba(255,195,90,.14);color:var(--amber);font-size:13.5px;font-weight:600}
+.cli{margin-top:clamp(14px,3vh,28px);color:var(--muted);font-size:14px}
+code{font:13px var(--mono);background:rgba(255,255,255,.06);border:1px solid var(--line);padding:4px 9px;border-radius:7px;white-space:nowrap;color:var(--ink)}
+footer{color:var(--muted);font-size:13px;text-align:center;padding:8px 16px 14px;opacity:.8}
+@media (max-width:860px){.cards{grid-template-columns:1fr}.slots{grid-template-columns:repeat(6,1fr)}.slots i:nth-child(n+7){display:none}}
+@media (prefers-reduced-motion:reduce){.dot{display:none}}
+</style>
+</head>
+<body>
+<main>
+  <span class="kicker">F.CSM302 Үйлдлийн систем · Бие даалт 1 · V-1-12</span>
+  <h1><span>Producer–Consumer</span><br>бодлого</h1>
+  <p class="lead">Хязгаарлагдмал буферийг семафор ба mutex-ээр хамгаалах арга</p>
+
+  <div class="pipe" id="pipe" aria-hidden="true">
+    <div class="node p"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>producer</div>
+    <div class="buf"><div class="buflabel">buffer[8]</div><div class="slots" id="slots"></div>
+      <div class="sems"><span>empty <b id="e">8</b></span><span>full <b id="f">0</b></span><span>mutex <b>1</b></span></div></div>
+    <div class="node c"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></div>consumer</div>
+  </div>
+
+  <div class="cards">
+    <a class="card py" href="/mail">
+      <div class="art"><svg viewBox="0 0 64 64" fill="none"><rect x="8" y="16" width="48" height="34" rx="6" fill="#fffaf0"/><path d="M10 19l22 16 22-16" stroke="#c7a462" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="18" r="6" fill="#ff6b5a"/></svg></div>
+      <div>
+        <h2>Шуудангийн хайрцаг</h2>
+        <p>Шуудан зөөгч ба хэрэглэгчийн жишээгээр</p>
+        <div class="tags"><span>Дуут тайлбар</span><span>Кодын мөр</span><span>Python</span></div>
+      </div>
+      <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+    <a class="card c" href="/raw">
+      <div class="art"><svg viewBox="0 0 64 64" fill="none"><path d="M14 22l10 10-10 10" stroke="#3fd69a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 44h20" stroke="#cfe0ff" stroke-width="4" stroke-linecap="round"/></svg></div>
+      <div>
+        <h2>Шууд ажиллагаа</h2>
+        <p>Номын C программын бодит thread-үүд</p>
+        <div class="warn" id="cwarn"></div>
+        <div class="tags"><span>C · Pthreads</span><span>Алдааны 4 туршилт</span><span>Лог</span></div>
+      </div>
+      <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+  </div>
+
+  <div class="cli">Терминалаас: <code>make -C src/c &amp;&amp; ./src/c/producer_consumer 5 3 3</code></div>
+</main>
+<footer>Серверийг унтраах: терминал дээр Ctrl+C</footer>
+<script>
+/* decoration only: items fly in from the producer and out to the consumer */
+(() => {
+  const N = 8, box = document.getElementById("slots"), pipe = document.getElementById("pipe");
+  box.innerHTML = "<i></i>".repeat(N);
+  const cells = [...box.children];
+  let inI = 0, outI = 0, n = 0, t = 0;
+  const show = () => { document.getElementById("e").textContent = N - n; document.getElementById("f").textContent = n; };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function fly(from, to, done){
+    if (reduce || document.hidden){ done(); return; }
+    const pr = pipe.getBoundingClientRect(), a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
+    const d = document.createElement("span"); d.className = "dot"; pipe.appendChild(d);
+    const x0 = a.left + a.width / 2 - pr.left - 7, x1 = b.left + b.width / 2 - pr.left - 7;
+    d.animate([{transform:`translateX(${x0}px)`, opacity:0}, {opacity:1, offset:.2}, {transform:`translateX(${x1}px)`, opacity:1}],
+              {duration:520, easing:"cubic-bezier(.4,0,.2,1)"}).onfinish = () => { d.remove(); done(); };
+  }
+  const P = pipe.querySelector(".node.p .ic"), C = pipe.querySelector(".node.c .ic");
+  setInterval(() => {
+    t++;
+    const produce = Math.floor(t / 10) % 2 === 0 ? Math.random() < .7 : Math.random() < .3;
+    if (produce && n < N){
+      const i = inI; inI = (inI + 1) % N; n++; show();
+      fly(P, cells[i], () => cells[i].classList.add("on"));
+    } else if (!produce && n > 0){
+      const i = outI; outI = (outI + 1) % N; n--; show();
+      cells[i].classList.remove("on"); fly(cells[i], C, () => {});
+    }
+  }, 620);
+})();
+
+fetch("/api/c/state", {cache: "no-store"}).then(async r => {
+  if (r.status === 503){
+    const d = await r.json().catch(() => ({}));
+    const w = document.getElementById("cwarn");
+    w.textContent = "Одоогоор ажиллахгүй: " + (d.error || "C программ бэлэн биш");
+    w.style.display = "block";
+  }
+}).catch(() => {});
+</script>
+</body>
+</html>

@@ -38,6 +38,20 @@ Bounded buffer (цагираг дараалал)-ийг `empty` / `full` тоо�
 
 Семафор 0 бол thread блоклогдоно. Mutex нэг удаад зөвхөн нэг thread-ийг critical section-д оруулна.
 
+## Дэлгэцийн зураг
+
+Бүх зургийг программыг бодитоор ажиллуулж авсан.
+
+| Нүүр хуудас | Хэвийн ажиллагаа |
+|---|---|
+| ![Нүүр хуудас](docs/img/home.jpg) | ![Хэвийн ажиллагаа](docs/img/c_main.jpg) |
+| Python жишээ эсвэл C · Pthreads горимыг сонгоно. | item-үүд producer-оос буфер рүү, буферээс consumer руу шилжиж байна. Шалгалт ногоон. |
+
+| Deadlock (`--bug order`) | Race condition (`--bug no-mutex`) |
+|---|---|
+| ![Deadlock](docs/img/c_dead.jpg) | ![Race](docs/img/c_count.jpg) |
+| lock → wait дараалал буруу: C1 mutex барьсаар хүлээж, бүгд гацсан. | Mutex-гүй 1P/1C: буферт 1 item байхад count −26 болж эвдэрсэн, программ илрүүлэв. |
+
 ## Quick Start
 
 **Шаардлага:** Linux (Debian / Ubuntu) эсвэл Windows 10/11 дээрх WSL, `gcc`, `make`, Python 3 (гадаад сан шаардлагагүй), хөтөч (Chrome, Edge, Firefox).
@@ -56,10 +70,6 @@ python3 src/gui.py
 # → http://127.0.0.1:8765/   (унтраахдаа терминалд Ctrl+C)
 
 # 3. Тушаалын мөрөөс (номын дагуу)
-<<<<<<< HEAD
-make -C src/c
-=======
->>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 make -C src/c BUFFER_SIZE=10         # өөр хэмжээ (1–20): өөрчлөгдвөл өөрөө дахин хөрвүүлнэ
 ./src/c/producer_consumer 5 3 3      # <унтах сек> <producers> <consumers>
 ./src/c/producer_consumer --bug no-mutex 5 3 3   # туршилт: no-mutex | no-empty | no-full | order
@@ -118,11 +128,7 @@ py src\gui.py
 | `src/bounded_buffer.py` | Python хэрэгжүүлэлт (шуудангийн жишээтэй горимд) |
 | `src/ui/` | `home.html` (горим сонгох), `mail.html` (шуудангийн жишээ), `raw.html` (C · Pthreads), `tour.json` (дуут тайлбар) |
 | `tests/` | `test_buffer.py`, `test_c.py`, `test_web.py` (нийт 48 автомат тест) |
-<<<<<<< HEAD
-| `docs/` | `V-1-12_Manual.pdf` – гарын авлага |
-=======
-| `docs/` | Manual, Final Report, Poster (доорх «Баримт бичиг» хэсгийг үз) |
->>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
+| `docs/` | Poster, Final Report, Manual, `img/` дэлгэцийн зургууд (доорх «Баримт бичиг» хэсгийг үз) |
 | `tools/` | `make_voice.py` – дуут тайлбарын аудио үүсгэгч (edge-tts) |
 
 ## Үндсэн боломжууд
@@ -143,28 +149,16 @@ py src\gui.py
 
 * Start / Pause / Step / Stop / Reset удирдлага. Stop дарахад эцсийн дүн лог дээр гарна.
 * `empty`, `full` семафорын утга, `mutex`-ийн эзэмшигч болон хүлээж буй thread-үүд, `in` / `out` заагч.
-<<<<<<< HEAD
-* `produced − consumed = buffer = count ✓` тууштай байдлын шалгалт (`count` нь C-ийн хувьсагч өөрөө).
-* Буферийн дээр тэмдэглэгээний тайлбар, баруун дээд буланд animation-ийн хоцрогдол (мс). 300 мс-ээс их хоцрох нислэгийг алгасаж, нүд үргэлж C-ийн бодит төлвийг харуулна.
-=======
 * `produced − consumed = buffer = count ✓` тууштай байдлын шалгалт (`count` нь C-ийн хувьсагч өөрөө). Ногоон бол бүх тоо таарч байна, улаан бол алдаа гарсан.
 * Буферийн дээр тэмдэглэгээний тайлбар (legend), баруун дээд буланд animation-ийн хоцрогдол (мс). 300 мс-ээс их хоцрох нислэгийг алгасаж, нүд үргэлж C-ийн бодит төлвийг харуулна.
->>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 * **Алдааны туршилт** (C хуудасны «алдаа» сонголт, CLI `--bug`): зөв кодоос нэг алдаа гаргаж, юу болохыг харуулна. Алдаа бүр улаанаар тэмдэглэгдэж, лог болон эцсийн дүнд гарна.
 
   | Сонголт | Кодын алдаа | Үр дагавар / хүлээгдэх дүгнэлт |
   |---|---|---|
-<<<<<<< HEAD
-  | `no-mutex` | `pthread_mutex_lock/unlock` байхгүй | race condition: хоёр thread нэг нүд рүү бичиж item алга болно. 1P/1C үед зөвхөн `count++`/`count--` эвдэрнэ (`count_errors`) |
-  | `no-empty` | producer `sem_wait(&empty)` хийхгүй | overflow: уншаагүй item дээр дарж бичнэ |
-  | `no-full` | consumer `sem_wait(&full)` хийхгүй | underflow: хоосон нүднээс уншина |
-  | `order` | `mutex_lock` → `sem_wait` дараалал буруу | deadlock: mutex барьсан thread 0 утгатай семафор хүлээж, бусад нь mutex хүлээнэ (бүтцээр нь илрүүлнэ, run богино ч гэсэн) |
-=======
   | `no-mutex` | `pthread_mutex_lock/unlock` байхгүй | race condition: хоёр thread нэг нүд рүү бичиж item алга болно. 1P/1C үед зөвхөн `count++`/`count--` эвдэрнэ (`count_errors`) → `INCONSISTENT` |
   | `no-empty` | producer `sem_wait(&empty)` хийхгүй | overflow: уншаагүй item дээр дарж бичнэ → `INCONSISTENT` |
   | `no-full` | consumer `sem_wait(&full)` хийхгүй | underflow: хоосон нүднээс уншина → `INCONSISTENT` |
   | `order` | `mutex_lock` → `sem_wait` дараалал буруу | deadlock: mutex барьсан thread 0 утгатай семафор хүлээж, бусад нь mutex хүлээнэ (бүтцээр нь илрүүлнэ, run богино ч гэсэн) → `DEADLOCK` |
->>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 * producer / consumer sleep (0–3 сек), хурд (0.25–4×) болон hold (0–1 сек)-ыг гулсуураар 0.05-ын нарийвчлалтай, ажиллаж байх үед тохируулна.
 * Лог-ийг `.txt` эсвэл `.csv` хэлбэрээр татаж авах.
 
@@ -177,6 +171,8 @@ py src\gui.py
 | Автомат тест | **48 / 48** PASS |
 | ThreadSanitizer race | **0** |
 | Хамгийн их ачаалал (40 thread, 1 с) | 288 822 item, алдаагүй |
+
+Дахин гаргах: `make -C src/c test` (хэвийн 5 тохиргоо, алдааны горим бүр, буруу оролт), `make -C src/c tsan`, `python3 -m unittest discover -s tests`.
 
 ## БД1 → БД2 (Final): шүүмжээр хийсэн сайжруулалт
 
@@ -205,11 +201,15 @@ py src\gui.py
 | Нүд бүрийн `occ[]` шалгагч | Алдагдсан болон хоосноос уншсан item-ийг тоолно. Алгоритмд нөлөөлөхгүй. |
 | Deadlock-ийг бүтцээр илрүүлэх | Хугацааны босго удаан программыг deadlock гэж андуурдаг. |
 
-## Баримт бичиг
+## Баримт бичиг ба final release
 
-* [Гарын авлага (Manual)](docs/V-1-12_Manual.docx)
-* [Final Report](docs/V-1-12_Final_Report.docx)
-* [Poster](docs/V-1-12_Poster.pdf)
+| Файл | Агуулга |
+|---|---|
+| [docs/V-1-12_Poster.pdf](docs/V-1-12_Poster.pdf) | Постер (үндсэн материал) |
+| [docs/V-1-12_Final_Report.pdf](docs/V-1-12_Final_Report.pdf) | Эцсийн тайлан: Reviewer Responses, дахин туршилт ([.docx](docs/V-1-12_Final_Report.docx)) |
+| [docs/V-1-12_Manual.pdf](docs/V-1-12_Manual.pdf) | Хэрэглэгчийн гарын авлага ([.docx](docs/V-1-12_Manual.docx)) |
+
+**Final release:** [`v2.0-final`](https://github.com/anunbayar1/CSM302-2627-BD1/releases/latest). Final Report, Manual, Poster нь энэ tag-ийн кодтой нийцнэ. Постерын QR код энэ release руу заана.
 
 ## Асуудал гарвал
 
@@ -221,12 +221,11 @@ py src\gui.py
 | `DEADLOCK` эсвэл алдаа гараад байна | Алдааны горимд «зөв код» сонгоод Reset дарна |
 | Ажиллаж байхад Эхлүүлэх дарахад алдаа | Эхлээд Stop эсвэл Reset дарна |
 
-## Хэрэглэсэн бэлэн код, сан, AI
+## Хэрэглэсэн бэлэн код, сан
 
 * Гадаад сан ашиглаагүй: C стандарт сан + POSIX Pthreads, Python стандарт сан, vanilla HTML / CSS / JavaScript.
 * Үсгийн фонт: IBM Plex Sans / Mono (SIL Open Font License), `src/ui/fonts/`-д хадгалсан тул интернет шаардлагагүй.
 * Алгоритм нь сурах бичгийн 7.1.1-р хэсэг (Figures 7.1, 7.2) болон Programming Project 4-т үндэслэсэн.
-* **AI:** Claude (Anthropic)-г код, тест, UI боловсруулахад ашигласан.
 
 ## Мэдэгдэж буй хязгаарлалт
 
@@ -236,10 +235,7 @@ py src\gui.py
 * Хэт хурдан үед (sleep 0, hold 0) сервер сүүлийн 5000 үйл явдлыг л хадгалах тул логт `... N events skipped` гарна. Тоолуур ба эцсийн дүн үнэн хэвээр.
 * `no-mutex` туршилтад race condition-ийг харагдахуйц болгохын тулд critical section дотор түр завсар (UI: 40 мс, CLI: 0.1 мс) нэмсэн. Энэ нь thread-ийг тэр мөчид өөр thread тасалдуулсныг (preemption) дуурайлгана. Бусад горимд энэ завсар байхгүй.
 * Алдаа илрүүлэхэд нүд бүрт дүүрэн / хоосон эсэхийг тэмдэглэх атомар шалгагч (`occ[]`), `0 ≤ count ≤ BUFFER_SIZE` шалгалт, төгсгөлд `count = буферт байгаа item` шалгалт ашигладаг. Эдгээр нь алгоритмын хэсэг биш, зөвхөн хэмжилт.
-<<<<<<< HEAD
-=======
 * ThreadSanitizer нь зөвхөн тухайн ажиллагаанд race олоогүйг баталгаажуулна.
->>>>>>> 0b170a2 (Docs,readme uptade-BD2 Final)
 * UI 50 мс тутам төлөв уншдаг тул `empty + full` түр зуур BUFFER_SIZE-аас бага харагдаж болно (thread `sem_wait`-ийн дараа, `sem_post`-оос өмнө байх үед). Энэ нь алдаа биш.
 * Дуут тайлбарын аудиог `tools/make_voice.py` (интернет шаардлагатай) үүсгэнэ. Аудио байхгүй бол хөтчийн хоолойг ашиглана.
 
