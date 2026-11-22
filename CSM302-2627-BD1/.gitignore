@@ -1,7 +1,0 @@
-__pycache__/
-*.pyc
-src/c/producer_consumer
-src/c/producer_consumer_tsan
-src/ui/voice/preview/
-src/c/.buffer_size
-src/c/producer_consumer_ui
