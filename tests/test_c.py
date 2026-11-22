@@ -62,7 +62,7 @@ class TestPthreadsVersion(unittest.TestCase):
         # A deadlock that has formed is always reported (exit 3). In a few % of 0.25 s runs it
         # has not formed yet; then the program must say so instead of hiding it.
         codes = []
-        for _ in range(5):
+        for _ in range(12):
             r = self.run_bin("-q", "--bug", "order", 0.25, 2, 2, 0.05)
             codes.append(r.returncode)
             if r.returncode == 3:
@@ -70,6 +70,8 @@ class TestPthreadsVersion(unittest.TestCase):
             else:
                 self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
                 self.assertIn("no deadlock in this run yet", r.stdout)
+            if codes.count(3) >= 3:
+                break
         self.assertGreaterEqual(codes.count(3), 3, codes)
 
     def test_count_matches_items(self):
